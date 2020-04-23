@@ -45,6 +45,7 @@ FILE (GLOB HEADER_FILES "../FilesDbParser.h"
                         "../PfsPageMapper.h"
                         "../PfsFilesystem.h"
                         "../PfsFile.h"
+			"../rif2zrif.h"
                         )
 source_group ("Header Files" FILES ${HEADER_FILES})
 
@@ -72,11 +73,12 @@ FILE (GLOB SOURCE_FILES "../FilesDbParser.cpp"
                         "../PfsPageMapper.cpp"
                         "../PfsFilesystem.cpp"
                         "../PfsFile.cpp"
+			"../rif2zrif.cpp"
                         )
 source_group ("Source Files" FILES ${SOURCE_FILES})
 
 add_library(${PROJECT} ${HEADER_FILES} ${SOURCE_FILES} ${F00D_FILES} ${CRYPTO_FILES})
 
-target_link_libraries(${PROJECT} host ${Boost_LIBRARIES} libzRIF libb64 zlib libtomcrypt)
+target_link_libraries(${PROJECT} ${Boost_LIBRARIES} libzRIF libb64 zlib libtomcrypt)
 target_include_directories(${PROJECT} PUBLIC .. ${Boost_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIR} ${LIBTOMCRYPT_INCLUDE_DIR} ${LIBB64_INCLUDE_DIR} ${LIBZRIF_INCLUDE_DIR})
 
