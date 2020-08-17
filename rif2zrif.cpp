@@ -10,7 +10,7 @@
 #include <cstdint>
 #include "rif2zrif.h"
 
-std::string rif2zrif(std::string& drmlicpath) {
+std::string rif2zrif(std::wstring& drmlicpath) {
     constexpr auto MAX_KEY_SIZE = 2048;
     constexpr auto MIN_KEY_SIZE = 512;
     std::streampos size;
