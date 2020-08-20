@@ -10,13 +10,13 @@
 #include <cstdint>
 #include "rif2zrif.h"
 
-std::string rif2zrif(std::wstring& drmlicpath) {
+std::string rif2zrif(std::string& drmlicpath) {
     constexpr auto MAX_KEY_SIZE = 2048;
     constexpr auto MIN_KEY_SIZE = 512;
     std::streampos size;
     char key[MAX_KEY_SIZE];
 
-    std::wifstream binfile(drmlicpath, std::ios::in | std::ios::binary | std::ios::ate);
+    std::ifstream binfile(drmlicpath, std::ios::in | std::ios::binary | std::ios::ate);
     size = binfile.tellg();
     binfile.seekg(0, std::ios::beg);
     binfile.read((wchar_t *)key, size);
@@ -34,8 +34,8 @@ std::string rif2zrif(std::wstring& drmlicpath) {
         memset(key, 0, MAX_KEY_SIZE);
         base64_encodestate state;
         base64_init_encodestate(&state);
-        int enc_len = base64_encode_block((char *)out, len, (char *)key, &state);
-        enc_len += base64_encode_blockend((char *)key + enc_len, &state);
+        int enc_len = base64_encode_block((char *)out, len, key, &state);
+        enc_len += base64_encode_blockend(key + enc_len, &state);
 
         std::cout << "rif2zrif sanity check: " << key << std::endl;
 
