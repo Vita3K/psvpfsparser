@@ -19,7 +19,7 @@ std::string rif2zrif(std::string& drmlicpath) {
     std::ifstream binfile(drmlicpath, std::ios::in | std::ios::binary | std::ios::ate);
     size = binfile.tellg();
     binfile.seekg(0, std::ios::beg);
-    binfile.read((wchar_t *)key, size);
+    binfile.read(key, size);
     int len = size;
     unsigned char out[MAX_KEY_SIZE];
     memset(out, 0, MAX_KEY_SIZE);
