@@ -10,13 +10,12 @@
 #include <cstdint>
 #include "rif2zrif.h"
 
-std::string rif2zrif(std::string& drmlicpath) {
+std::string rif2zrif(std::ifstream &binfile) {
     constexpr auto MAX_KEY_SIZE = 2048;
     constexpr auto MIN_KEY_SIZE = 512;
     std::streampos size;
     char key[MAX_KEY_SIZE];
 
-    std::ifstream binfile(drmlicpath, std::ios::in | std::ios::binary | std::ios::ate);
     size = binfile.tellg();
     binfile.seekg(0, std::ios::beg);
     binfile.read(key, size);
