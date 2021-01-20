@@ -10,6 +10,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "Utils.h"
+#include "FilesDbParser.h"
 
 bool isZeroVector(const std::vector<std::uint8_t>& data)
 {
@@ -123,18 +124,39 @@ sce_junction::sce_junction(const sce_junction& other)
 //it seems that pfs assumes windows as its prior filesystem for tools
 bool sce_junction::is_equal(boost::filesystem::path p) const
 {
-   std::string left = m_value.generic_string();
-   boost::to_upper(left);
+   return boost::iequals(m_value.generic_string(), p.generic_string());
+}
 
-   std::string right = p.generic_string();
-   boost::to_upper(right);
-
-   return left == right;
+boost::filesystem::path sce_junction::get_path() const
+{
+    return m_value;
 }
 
 bool sce_junction::is_equal(const sce_junction& other) const
 {
    return is_equal(other.m_value);
+}
+
+bool sce_ng_pfs_file_t::operator<(const sce_ng_pfs_file_t &other) {
+    if (this->path() < other.path())
+        return true;
+    return false;
+}
+bool sce_ng_pfs_file_t::operator<(const sce_ng_pfs_file_t &other) const {
+    if (this->path() < other.path())
+        return true;
+    return false;
+}
+
+bool sce_ng_pfs_file_t::operator>(const sce_ng_pfs_file_t &other) {
+    if (this->path() > other.path())
+        return false;
+    return true;
+}
+bool sce_ng_pfs_file_t::operator>(const sce_ng_pfs_file_t &other) const {
+    if (this->path() > other.path())
+        return false;
+    return true;
 }
 
 bool sce_junction::operator<(const sce_junction& other)
@@ -145,6 +167,13 @@ bool sce_junction::operator<(const sce_junction& other)
 bool sce_junction::operator<(const sce_junction& other) const 
 {
    return m_value < other.m_value;
+}
+bool sce_junction::operator>(const sce_junction &other) {
+    return m_value > other.m_value;
+}
+
+bool sce_junction::operator>(const sce_junction &other) const {
+    return m_value > other.m_value;
 }
 
 void sce_junction::link_to_real(const sce_junction& p) const
