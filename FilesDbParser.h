@@ -164,7 +164,13 @@ public:
 
    }
 
+   bool operator<(const sce_ng_pfs_file_t &other);
+   bool operator<(const sce_ng_pfs_file_t &other) const;
+   bool operator>(const sce_ng_pfs_file_t &other);
+   bool operator>(const sce_ng_pfs_file_t &other) const;
+
 public:
+
    const sce_junction& path() const
    {
       return m_path;
