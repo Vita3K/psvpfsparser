@@ -24,6 +24,7 @@
 #include "NodeIcvCalculator.h"
 #include "HashTree.h"
 #include "FlagOperations.h"
+#include <execution>
 
 //------------ type functions -----------------
 
@@ -796,28 +797,64 @@ bool FilesDbParser::linkDirpaths(const std::set<boost::filesystem::path> real_di
 {
    m_output << "Linking dir paths..." << std::endl;
 
-   for(auto& dir : m_dirs)
-   {
-      //comparison should be done with is_equal (upper case) so it can not be replaced by .find()
-      bool found = false;
-      for(auto& real_dir : real_directories)
-      {
-         if(dir.path().is_equal(real_dir))
-         {
-            dir.path().link_to_real(real_dir);
-            found = true;
-            break;
-         }
-      }
-      
-      if(!found)
-      {
-         m_output << "Directory " << dir.path() << " does not exist" << std::endl;
-         return false;
-      }
-   }
+   std::mutex logMutex;
 
-   return true;
+   std::vector<boost::filesystem::path> real_directories_vector;
+   std::vector<boost::filesystem::path> real_directories_vector_uppercase;
+
+   std::for_each(
+       std::execution::par_unseq,
+       real_directories.begin(),
+       real_directories.end(),
+       [&](auto& dir) {
+           {
+               std::lock_guard<std::mutex> lock(logMutex);
+               real_directories_vector.push_back(dir);
+           }
+           auto str = dir.generic_path().string();
+           std::transform(str.begin(), str.end(), str.begin(), toupper);
+           {
+               std::lock_guard<std::mutex> lock(logMutex);
+               real_directories_vector_uppercase.push_back(str);
+           }
+       });
+   //Sort vectors
+   real_directories_vector.shrink_to_fit();
+   real_directories_vector_uppercase.shrink_to_fit();
+   std::sort(real_directories_vector.begin(), real_directories_vector.end());
+   std::sort(real_directories_vector_uppercase.begin(), real_directories_vector_uppercase.end());
+
+   bool shouldReturnError = false;
+
+   std::for_each(
+       std::execution::par_unseq,
+       m_dirs.begin(),
+       m_dirs.end(),
+       [&](sce_ng_pfs_dir_t &dir) {
+           bool found = false;
+
+           auto dirPath = dir.path().get_path().string();
+           std::transform(dirPath.begin(), dirPath.end(), dirPath.begin(), toupper);
+           auto exists = std::binary_search(
+               real_directories_vector_uppercase.begin(),
+               real_directories_vector_uppercase.end(),
+               dirPath);
+           if (exists) {
+               dir.path().link_to_real(dir.path().get_path());
+               found = true;
+               return;
+           }
+
+           if (!found) {
+               {
+                   std::lock_guard<std::mutex> lock(logMutex);
+                   m_output << "Directory " << dir.path() << " does not exist" << std::endl;
+               }
+               shouldReturnError = true;
+           }
+       });
+
+   return shouldReturnError ? false : true;
 }
 
 //checks that files exist
@@ -826,38 +863,76 @@ bool FilesDbParser::linkFilepaths(const std::set<boost::filesystem::path> real_f
 {
    m_output << "Linking file paths..." << std::endl;
 
-   for(auto& file : m_files)
-   {
-      //comparison should be done with is_equal (upper case) so it can not be replaced by .find()
-      bool found = false;
-      for(auto& real_file : real_files)
-      {
-         if(file.path().is_equal(real_file))
-         {
-            file.path().link_to_real(real_file);
-            found = true;
-            break;
-         }
-      }
+   std::mutex logMutex;
 
-      if(!found)
-      {
-         m_output << "File " << file.path() << " does not exist" << std::endl;
-         return false;
-      }
+   std::vector<boost::filesystem::path> real_files_vector;
+   std::vector<boost::filesystem::path> real_files_vector_uppercase;
 
-      boost::uintmax_t size = file.path().file_size();
-      if(size != file.file.m_info.header.size)
-      {
-         if((size % fileSectorSize) > 0)
-         {
-            m_output << "File " << file.path() << " size incorrect" << std::endl;
-            return false;
-         }
-      }
-   }
+   std::for_each(
+       std::execution::par_unseq,
+       real_files.begin(),
+       real_files.end(),
+       [&](auto &file) {
+           {
+               std::lock_guard<std::mutex> lock(logMutex);
+               real_files_vector.push_back(file);
+           }
+           auto str = file.generic_path().string();
+           std::transform(str.begin(), str.end(), str.begin(), toupper);
+           {
+               std::lock_guard<std::mutex> lock(logMutex);
+               real_files_vector_uppercase.push_back(str);
+           }
+       });
 
-   return true;
+   //Sort vectors
+   real_files_vector.shrink_to_fit();
+   real_files_vector_uppercase.shrink_to_fit();
+   std::sort(real_files_vector.begin(), real_files_vector.end());
+   std::sort(real_files_vector_uppercase.begin(), real_files_vector_uppercase.end());
+
+   bool shouldReturnError = false;
+
+   std::for_each(
+       std::execution::par_unseq,
+       m_files.begin(),
+       m_files.end(),
+       [&](sce_ng_pfs_file_t &file) {
+           bool found = false;
+           auto filePath = file.path().get_path().string();
+           std::transform(filePath.begin(), filePath.end(), filePath.begin(), toupper);
+
+           auto exists = std::binary_search(
+               real_files_vector_uppercase.begin(),
+               real_files_vector_uppercase.end(),
+               filePath);
+           if (exists) {
+               file.path().link_to_real(file.path().get_path());
+               found = true;
+               return;
+           }
+
+           if (!found) {
+               {
+                   std::lock_guard<std::mutex> lock(logMutex);
+                   m_output << "File " << file.path() << " does not exist" << std::endl;
+               }
+               shouldReturnError = true;
+           }
+
+           boost::uintmax_t size = file.path().file_size();
+           if (size != file.file.m_info.header.size) {
+               if ((size % fileSectorSize) > 0) {
+                   {
+                       std::lock_guard<std::mutex> lock(logMutex);
+                       m_output << "File " << file.path() << " size incorrect" << std::endl;
+                   }
+                   shouldReturnError = true;
+               }
+           }
+       });
+
+   return shouldReturnError ? -1 : true;
 }
 
 //returns number of extra files in real file system which are not present in files.db
@@ -868,59 +943,136 @@ int FilesDbParser::matchFileLists(const std::set<boost::filesystem::path>& files
    int real_extra = 0;
 
    bool print = false;
-   for(auto& rp : files)
-   {
-      bool found = false;
 
-      //comparison should be done with is_equal (upper case) so it can not be replaced by .find()
-      for(auto& vp : m_files)
-      {
-         if(vp.path().is_equal(rp))
-         {
-            found = true;
-            break;
-         }
-      }
+   std::mutex logMutex;
 
-      if(!found)
-      {
-         if(!print)
-         {
-            m_output << "Files not found in files.db (warning):" << std::endl;
-            print = true;
-         }
+   std::vector<sce_ng_pfs_file_t> m_files_vector;
+   std::vector<sce_ng_pfs_file_t> m_files_vector_uppercase;
 
-         m_output << rp.generic_string() << std::endl;
-         real_extra++;
-      }
-   }
+   std::for_each(
+       std::execution::par_unseq,
+       m_files.begin(),
+       m_files.end(),
+       [&](auto &file) {
+           {
+               std::lock_guard<std::mutex> lock(logMutex);
+               m_files_vector.push_back(file);
+           }
+           auto str = file.path().get_path().generic_path().string();
+           std::transform(str.begin(), str.end(), str.begin(), toupper);
+           auto _file = sce_ng_pfs_file_t(sce_junction(str));
+           {
+               std::lock_guard<std::mutex> lock(logMutex);
+               m_files_vector_uppercase.push_back(_file);
+           }
+       });
+
+   //Sort vectors
+   m_files_vector.shrink_to_fit();
+   m_files_vector_uppercase.shrink_to_fit();
+   std::sort(m_files_vector.begin(), m_files_vector.end());
+   std::sort(m_files_vector_uppercase.begin(), m_files_vector_uppercase.end());
+
+
+   std::for_each(
+       std::execution::par_unseq,
+       files.begin(),
+       files.end(),
+       [&](const boost::filesystem::path &rp) {
+           bool found = false;
+
+           std::string str = rp.string();
+           std::transform(str.begin(), str.end(), str.begin(), toupper);
+           const auto file = sce_ng_pfs_file_t(sce_junction(str));
+
+           auto exists = std::binary_search(
+               m_files_vector_uppercase.begin(),
+               m_files_vector_uppercase.end(),
+               file);
+           if (exists) {
+               found = true;
+               return;
+           }
+
+           if (!found) {
+               if (!print) {
+                   {
+                       std::lock_guard<std::mutex> lock(logMutex);
+                       m_output << "Files not found in files.db (warning):" << std::endl;
+                   }
+                   print = true;
+               }
+
+               {
+                   std::lock_guard<std::mutex> lock(logMutex);
+                   m_output << rp.generic_string() << std::endl;
+                   real_extra++;
+               }
+           }
+       });
 
    print = false;
-   for(auto& vp : m_files)
-   {
-      bool found = false;
+   
+   std::vector<boost::filesystem::path> files_vector;
+   std::vector<boost::filesystem::path> files_vector_uppercase;
 
-      //comparison should be done with is_equal (upper case) so it can not be replaced by .find()
-      for(auto& rp : files)
-      {
-         if(vp.path().is_equal(rp))
-         {
-            found = true;
-            break;
-         }
-      }
+   std::for_each(
+       std::execution::par_unseq,
+       files.begin(),
+       files.end(),
+       [&](auto &file) {
+           {
+               std::lock_guard<std::mutex> lock(logMutex);
+               files_vector.push_back(file);
+           }
+           auto str = file.generic_path().string();
+           std::transform(str.begin(), str.end(), str.begin(), toupper);
+           {
+               std::lock_guard<std::mutex> lock(logMutex);
+               files_vector_uppercase.push_back(str);
+           }
+       });
 
-      if(!found)
-      {
-         if(!print)
-         {
-            m_output << "Files not found in filesystem :" << std::endl;
-            print = true;
-         }
+   //Sort vectors
+   files_vector.shrink_to_fit();
+   files_vector_uppercase.shrink_to_fit();
+   std::sort(files_vector.begin(), files_vector.end());
+   std::sort(files_vector_uppercase.begin(), files_vector_uppercase.end());
 
-         m_output << vp.path() << std::endl;
-      }
-   }
+   std::for_each(
+       std::execution::par_unseq,
+       m_files.begin(),
+       m_files.end(),
+       [&](sce_ng_pfs_file_t &vp) {
+           bool found = false;
+
+           auto filePath = vp.path().get_path().string();
+           std::transform(filePath.begin(), filePath.end(), filePath.begin(), toupper);
+
+            auto exists = std::binary_search(
+               files_vector_uppercase.begin(),
+               files_vector_uppercase.end(),
+               filePath);
+            if (exists) {
+                found = true;
+                return;
+            }
+
+           if (!found) {
+               if (!print) {
+                   {
+                       std::lock_guard<std::mutex> lock(logMutex);
+                       m_output << "Files not found in filesystem :" << std::endl;
+                   }
+                   print = true;
+               }
+
+               {
+                   std::lock_guard<std::mutex> lock(logMutex);
+                   m_output << vp.path() << std::endl;
+               }
+           }
+       });
 
    return real_extra;
 }

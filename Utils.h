@@ -44,6 +44,8 @@ public:
    sce_junction(const sce_junction& other);
 
 public:
+   boost::filesystem::path get_path() const;
+
    bool is_equal(boost::filesystem::path p) const;
 
    bool is_equal(const sce_junction& other) const;
@@ -51,7 +53,11 @@ public:
 public:
    bool operator<(const sce_junction& other);
 
-   bool operator<(const sce_junction& other) const;
+   bool operator<(const sce_junction &other) const;
+
+   bool operator>(const sce_junction &other);
+
+   bool operator>(const sce_junction &other) const;
 
 public:
    void link_to_real(const sce_junction& p) const;
