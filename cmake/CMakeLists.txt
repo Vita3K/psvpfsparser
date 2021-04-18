@@ -46,6 +46,7 @@ FILE (GLOB HEADER_FILES "../FilesDbParser.h"
                         "../PfsFilesystem.h"
                         "../PfsFile.h"
 			"../rif2zrif.h"
+			"../zrif2rif.h"
                         )
 source_group ("Header Files" FILES ${HEADER_FILES})
 
@@ -74,6 +75,7 @@ FILE (GLOB SOURCE_FILES "../FilesDbParser.cpp"
                         "../PfsFilesystem.cpp"
                         "../PfsFile.cpp"
 			"../rif2zrif.cpp"
+			"../zrif2rif.cpp"
                         )
 source_group ("Source Files" FILES ${SOURCE_FILES})
 
