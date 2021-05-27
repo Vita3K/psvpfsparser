@@ -3,8 +3,10 @@
 #include <cstdint>
 #include <vector>
 #include <iostream>
+#include <memory>
+#include <cstring>
 
-#include <boost/filesystem.hpp>
+#include "LocalFilesystem.h"
 
 //some terms
 //SCEIRODB (magic word) - sony computer entertainment interface readonly database (unicv file)
@@ -82,7 +84,7 @@ public:
    {
       return m_header.blockSize;
    }
-   
+
    std::uint64_t get_dataSize() const
    {
       return m_header.dataSize;
@@ -105,7 +107,7 @@ struct sce_iftbl_header_t
 
    //This is sector size for files.db
    std::uint32_t fileSectorSize; // expected 0x8000
-   
+
    std::uint32_t padding; //this is probably padding? always zero
 
    //these records are empty if sce_iftbl_header_t corresponds to directory
@@ -144,7 +146,7 @@ struct sig_tbl_header_t
 {
    std::uint32_t binTreeSize; // for unicv.db for blocksize 0x400 this would be 0x3f8 = sizeof(sig_tbl_header_t) + (0x32 * 0x14) : which are maxNSectors * sigSize (0x8 bytes are unused)
                          // for icv.db for blocksize 0x400 this would be 0x394 = sizeof(sig_icv_tbl_header_t) + (0x2D * 0x14) : which are 2D * sigSize (0x6C bytes are unused)
-   std::uint32_t sigSize; //expected 0x14 - size of hmac-sha1 
+   std::uint32_t sigSize; //expected 0x14 - size of hmac-sha1
    std::uint32_t nSignatures; //number of chunks in this block
    std::uint32_t padding; //most likely padding ? always zero
 };
@@ -175,7 +177,7 @@ public:
    virtual ~sig_tbl_header_base_t()
    {
    }
-   
+
 public:
    std::uint32_t get_binTreeSize() const
    {
@@ -332,12 +334,12 @@ public:
 
    std::uint32_t get_binTreeNumMaxAvail() const override
    {
-      return m_header.binTreeNumMaxAvail; 
+      return m_header.binTreeNumMaxAvail;
    }
 
    std::uint32_t get_pageSize() const override
    {
-      return m_header.pageSize; 
+      return m_header.pageSize;
    }
 
    std::uint32_t get_version() const override
@@ -393,7 +395,7 @@ public:
    {
       return m_header.fileSectorSize;
    }
-   
+
    const std::uint8_t* get_dbseed() const override
    {
       throw std::runtime_error("not implemented");
@@ -406,7 +408,7 @@ public:
 
    std::uint32_t get_pageSize() const override
    {
-      return m_header.pageSize; 
+      return m_header.pageSize;
    }
 
    std::uint32_t get_version() const override
@@ -501,7 +503,7 @@ public:
       return true;
    }
 };
-  
+
 //this is a file table structure - it contais SCEIFTBL/SCEICVDB/SCEINULL header and list of file signature blocks
 //in more generic terms - this is also a data block of size 0x400
 //which is followed by signature blocks
@@ -567,7 +569,7 @@ public:
    sce_iftbl_proxy_t(std::shared_ptr<sce_iftbl_header_base_t> header, std::ostream& output)
       : sce_iftbl_cvdb_proxy_t(header, output)
    {
-   } 
+   }
 
 public:
    std::uint32_t get_icv_salt() const override;
@@ -630,7 +632,7 @@ public:
    }
 
 public:
-   virtual bool read(boost::filesystem::path filepath) = 0;
+   virtual bool read(psvpfs::path filepath) = 0;
 
 protected:
    bool read_table_item(std::ifstream& inputStream, std::uint64_t& index, std::uint32_t icv_salt);
@@ -650,7 +652,7 @@ public:
    }
 
 public:
-   bool read(boost::filesystem::path filepath);
+   bool read(psvpfs::path filepath);
 };
 
 //this is a root object for icv.db - it contains list of SCEICVDB and SCEINULL blocks. there is no additional header
@@ -663,7 +665,7 @@ public:
    }
 
 public:
-   bool read(boost::filesystem::path filepath);
+   bool read(psvpfs::path filepath);
 };
 
 #pragma pack(pop)

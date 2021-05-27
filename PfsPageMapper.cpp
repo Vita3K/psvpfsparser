@@ -1,12 +1,10 @@
 #include "PfsPageMapper.h"
 
-#include <boost/lexical_cast.hpp>
-
 #include "SecretGenerator.h"
 #include "UnicvDbParser.h"
 #include "FilesDbParser.h"
 
-PfsPageMapper::PfsPageMapper(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output, const unsigned char* klicensee, boost::filesystem::path titleIdPath)
+PfsPageMapper::PfsPageMapper(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output, const unsigned char* klicensee, psvpfs::path titleIdPath)
    : m_cryptops(cryptops), m_iF00D(iF00D), m_output(output), m_titleIdPath(titleIdPath)
 {
    memcpy(m_klicensee, klicensee, 0x10);
@@ -88,7 +86,7 @@ int assign_hash(std::shared_ptr<merkle_tree_node<icv> > node, void* ctx)
    auto item = sectorHashMap->find(node->m_index);
    if(item == sectorHashMap->end())
       throw std::runtime_error("Missing sector hash");
-      
+
    node->m_context.m_data.assign(item->second.m_data.begin(), item->second.m_data.end());
 
    return 0;
@@ -102,7 +100,7 @@ int combine_hash(std::shared_ptr<merkle_tree_node<icv> > result, std::shared_ptr
    memcpy(bytes28 + 0x14, right->m_context.m_data.data(), 0x14);
 
    std::pair<std::shared_ptr<ICryptoOperations>, unsigned char*>* ctx_cast = (std::pair<std::shared_ptr<ICryptoOperations>, unsigned char*>*)ctx;
-   
+
    std::shared_ptr<ICryptoOperations> cryptops = ctx_cast->first;
    unsigned char* secret = ctx_cast->second;
 
@@ -124,13 +122,13 @@ int PfsPageMapper::compare_hash_tables(const std::vector<icv>& left, const std::
 {
    if(left.size() != right.size())
       return -1;
-   
+
    for(std::size_t i = 0; i < left.size(); i++)
    {
       if(memcmp(left[i].m_data.data(), right[i].m_data.data(), 0x14) != 0)
          return -1;
    }
-   
+
    return 0;
 }
 
@@ -162,7 +160,7 @@ int PfsPageMapper::validate_merkle_trees(const std::unique_ptr<FilesDbParser>& f
          m_output << "Table item not found in page map" << std::endl;
          return -1;
       }
-      
+
       const sce_junction& junction = junctionIt->second;
 
       //read junction into sector map
@@ -170,7 +168,7 @@ int PfsPageMapper::validate_merkle_trees(const std::unique_ptr<FilesDbParser>& f
       junction.open(inputStream);
 
       std::uint32_t sectorSize = table->get_header()->get_fileSectorSize();
-      std::uintmax_t fileSize = junction.file_size(); 
+      std::uintmax_t fileSize = junction.file_size();
 
       std::uint32_t nSectors = static_cast<std::uint32_t>(fileSize / sectorSize);
       std::uint32_t tailSize = fileSize % sectorSize;
@@ -229,16 +227,16 @@ int PfsPageMapper::validate_merkle_trees(const std::unique_ptr<FilesDbParser>& f
       {
          m_output << e.what() << std::endl;
          return -1;
-      }  
+      }
    }
 
    return 0;
 }
 
 //filesDbParser and unicvDbParser are not made part of the context of PfsPageMapper
-//the reason is because both filesDbParser and unicvDbParser have to be 
+//the reason is because both filesDbParser and unicvDbParser have to be
 //initialized with parse method externally prior to calling bruteforce_map
-//having filesDbParser and unicvDbParser as constructor arguments will 
+//having filesDbParser and unicvDbParser as constructor arguments will
 //introduce ambiguity in usage of PfsPageMapper
 int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbParser, const std::unique_ptr<UnicvDbParser>& unicvDbParser)
 {
@@ -250,7 +248,7 @@ int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbP
    else
       m_output << "Building icv.db -> files.db relation..." << std::endl;
 
-   boost::filesystem::path root(m_titleIdPath);
+   psvpfs::path root(m_titleIdPath);
 
    //check file fileSectorSize
    std::set<std::uint32_t> fileSectorSizes;
@@ -270,8 +268,8 @@ int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbP
    std::uint32_t uniqueSectorSize = *fileSectorSizes.begin();
 
    //get all files and directories
-   std::set<boost::filesystem::path> files;
-   std::set<boost::filesystem::path> directories;
+   std::set<psvpfs::path> files;
+   std::set<psvpfs::path> directories;
    getFileListNoPfs(root, files, directories);
 
    //pre read all the files once
@@ -283,7 +281,7 @@ int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbP
 
       std::uintmax_t fsz = sp.file_size();
 
-      // using uniqueSectorSize here. 
+      // using uniqueSectorSize here.
       // in theory this size may vary per SCEIFTBL - this will make bruteforcing a bit harder.
       // files can not be pre read in this case
       // in practice though it does not change.
@@ -331,7 +329,7 @@ int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbP
             const unsigned char* zeroSectorIcv = t->m_blocks.front().m_signatures.front().m_data.data();
 
             //try to find match by hash of zero sector
-            found_path = brutforce_hashes(filesDbParser, fileDatas, secret, zeroSectorIcv); 
+            found_path = brutforce_hashes(filesDbParser, fileDatas, secret, zeroSectorIcv);
          }
          else
          {
@@ -359,7 +357,7 @@ int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbP
             {
                m_output << e.what() << std::endl;
                return -1;
-            } 
+            }
          }
 
          if(found_path)
@@ -397,11 +395,11 @@ int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbP
 }
 
 //this is a test method that was supposed to be used for caching
-int PfsPageMapper::load_page_map(boost::filesystem::path filepath, std::map<std::uint32_t, std::string>& pageMap) const
+int PfsPageMapper::load_page_map(psvpfs::path filepath, std::map<std::uint32_t, std::string>& pageMap) const
 {
-   boost::filesystem::path fp(filepath);
+   psvpfs::path fp(filepath);
 
-   if(!boost::filesystem::exists(fp))
+   if(!psvpfs::exists(fp))
    {
       m_output << "File " << fp.generic_string() << " does not exist" << std::endl;
       return -1;
@@ -420,7 +418,7 @@ int PfsPageMapper::load_page_map(boost::filesystem::path filepath, std::map<std:
       int index = line.find(' ');
       std::string pageStr = line.substr(0, index);
       std::string path = line.substr(index + 1);
-      std::uint32_t page = boost::lexical_cast<std::uint32_t>(pageStr);
+      std::uint32_t page = std::atoi(pageStr.c_str());
       pageMap.insert(std::make_pair(page, path));
    }
 

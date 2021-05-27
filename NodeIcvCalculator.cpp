@@ -1,5 +1,6 @@
 #include "NodeIcvCalculator.h"
 
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -54,7 +55,7 @@ int calculate_node_icv(std::shared_ptr<ICryptoOperations> cryptops, sce_ng_pfs_h
       cryptops->hmac_sha1(raw_data + 4, icv, dataSize, secret, 0x14);
       return 0;
    }
-   
+
    if(node_header == 0)
       return -1;
 

@@ -13,9 +13,6 @@
 #include <iomanip>
 #include <memory>
 
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
-
 #include "Utils.h"
 #include "FlagOperations.h"
 #include "IF00DKeyEncryptor.h"
@@ -62,7 +59,7 @@ enum sce_ng_pfs_block_types : std::uint32_t
 
 struct sce_ng_pfs_block_header_t
 {
-   std::uint32_t parent_page_number; 
+   std::uint32_t parent_page_number;
    sce_ng_pfs_block_types type;
    std::uint32_t nFiles;
    std::uint32_t padding; // probably padding ? always 0
@@ -80,7 +77,7 @@ enum sce_ng_pfs_file_types : std::uint16_t
    unexisting =                 ATTR_RW_OR_NONE,  //(0x0000)
    normal_file =                ATTR_RO, //(0x0001)
    normal_directory =           ATTR_DIR,  //(0x8000)
-   
+
    sys_directory =              ATTR_DIR | ATTR_SYS1 | ATTR_SYS2, //(0x8006)
 
    unencrypted_system_file_rw = ATTR_NENC | ATTR_SYS1 | ATTR_SYS2, //(0x4006)
@@ -212,7 +209,7 @@ private:
    std::shared_ptr<IF00DKeyEncryptor> m_iF00D;
    std::ostream& m_output;
    unsigned char m_klicensee[0x10];
-   boost::filesystem::path m_titleIdPath;
+   psvpfs::path m_titleIdPath;
 
 private:
    sce_ng_pfs_header_t m_header;
@@ -220,8 +217,8 @@ private:
    std::vector<sce_ng_pfs_dir_t> m_dirs;
 
 public:
-   FilesDbParser(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output, 
-                 const unsigned char* klicensee, boost::filesystem::path titleIdPath);
+   FilesDbParser(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
+                 const unsigned char* klicensee, psvpfs::path titleIdPath);
 
 private:
    bool verify_header_icv(std::ifstream& inputStream, const unsigned char* secret);
@@ -248,11 +245,11 @@ private:
    bool constructFilePaths(const std::map<std::uint32_t, std::uint32_t>& dirMatrix, const std::map<std::uint32_t, std::uint32_t>& fileMatrix, const std::vector<sce_ng_pfs_flat_block_t>& flatBlocks);
 
 private:
-   bool linkDirpaths(const std::set<boost::filesystem::path> real_directories);
+   bool linkDirpaths(const std::set<psvpfs::path> real_directories);
 
-   bool linkFilepaths(const std::set<boost::filesystem::path> real_files, std::uint32_t fileSectorSize);
+   bool linkFilepaths(const std::set<psvpfs::path> real_files, std::uint32_t fileSectorSize);
 
-   int matchFileLists(const std::set<boost::filesystem::path>& files);
+   int matchFileLists(const std::set<psvpfs::path>& files);
 
 public:
    int parse();

@@ -6,32 +6,29 @@
 #include <stdio.h>
 #include <iomanip>
 
-#include <boost/filesystem.hpp>
-#include <boost/range/iterator_range.hpp>
-
 #include "UnicvDbTypes.h"
 
-UnicvDbParser::UnicvDbParser(boost::filesystem::path titleIdPath, std::ostream& output)
+UnicvDbParser::UnicvDbParser(psvpfs::path titleIdPath, std::ostream& output)
    : m_titleIdPath(titleIdPath), m_output(output)
 {
 }
 
 int UnicvDbParser::parse()
 {
-   if(!boost::filesystem::exists(m_titleIdPath))
+   if(!psvpfs::exists(m_titleIdPath))
    {
       m_output << "Root directory does not exist" << std::endl;
       return -1;
    }
 
-   boost::filesystem::path root(m_titleIdPath);
+   psvpfs::path root(m_titleIdPath);
 
-   boost::filesystem::path filepath = root / "sce_pfs" / "unicv.db";
+   psvpfs::path filepath = root / "sce_pfs" / "unicv.db";
 
-   if(!boost::filesystem::exists(filepath))
+   if(!psvpfs::exists(filepath))
    {
-      boost::filesystem::path filepath2 = root / "sce_pfs" / "icv.db";
-      if(!boost::filesystem::exists(filepath2) || !boost::filesystem::is_directory(filepath2))
+      psvpfs::path filepath2 = root / "sce_pfs" / "icv.db";
+      if(!psvpfs::exists(filepath2) || !psvpfs::is_directory(filepath2))
       {
          m_output << "failed to find unicv.db file or icv.db folder" << std::endl;
          return -1;

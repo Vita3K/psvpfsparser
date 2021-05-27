@@ -1,11 +1,10 @@
 #pragma once
 
-#include <map>
-
-#include <boost/filesystem.hpp>
-
 #include "IF00DKeyEncryptor.h"
 #include "ICryptoOperations.h"
+
+#include <map>
+#include <memory>
 
 class F00DNativeKeyEncryptor : public IF00DKeyEncryptor
 {

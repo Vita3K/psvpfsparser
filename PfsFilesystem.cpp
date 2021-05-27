@@ -2,8 +2,10 @@
 
 #include "PfsFile.h"
 
-PfsFilesystem::PfsFilesystem(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output, 
-                 const unsigned char* klicensee, boost::filesystem::path titleIdPath)
+#include <cstring>
+
+PfsFilesystem::PfsFilesystem(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
+                 const unsigned char* klicensee, psvpfs::path titleIdPath)
    : m_cryptops(cryptops), m_iF00D(iF00D), m_output(output), m_titleIdPath(titleIdPath)
 {
    memcpy(m_klicensee, klicensee, 0x10);
@@ -20,7 +22,7 @@ std::vector<sce_ng_pfs_file_t>::const_iterator PfsFilesystem::find_file_by_path(
    for(std::vector<sce_ng_pfs_file_t>::const_iterator it = files.begin(); it != files.end(); ++it)
    {
       if(it->path().is_equal(p))
-         return it; 
+         return it;
    }
    return files.end();
 }
@@ -35,11 +37,11 @@ int PfsFilesystem::mount()
 
    if(m_pageMapper->bruteforce_map(m_filesDbParser, m_unicvDbParser) < 0)
       return -1;
-   
+
    return 0;
 }
 
-int PfsFilesystem::decrypt_files(boost::filesystem::path destTitleIdPath) const
+int PfsFilesystem::decrypt_files(psvpfs::path destTitleIdPath) const
 {
    const sce_ng_pfs_header_t& ngpfs = m_filesDbParser->get_header();
    const std::vector<sce_ng_pfs_file_t>& files = m_filesDbParser->get_files();
@@ -152,7 +154,7 @@ int PfsFilesystem::decrypt_files(boost::filesystem::path destTitleIdPath) const
          m_output << "Unexpected file type" << std::endl;
          return -1;
       }
-   }   
+   }
 
    return 0;
 }

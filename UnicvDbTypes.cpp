@@ -102,7 +102,7 @@ bool sig_tbl_header_base_t::read(std::ifstream& inputStream, std::shared_ptr<sce
 {
    //read header
    inputStream.read((char*)&m_header, sizeof(sig_tbl_header_t));
-   
+
    //validate header
    if(!validate(fft, sizeCheck))
       return false;
@@ -269,7 +269,7 @@ bool sce_icvdb_header_proxy_t::validate() const
    {
       m_output << "Unexpected fileSectorSize" << std::endl;
       return false;
-   }   
+   }
 
    if((m_realDataSize - m_header.pageSize) != m_header.dataSize)
    {
@@ -528,7 +528,7 @@ bool sce_idb_base_t::read_table_item(std::ifstream& inputStream, std::uint64_t& 
    return true;
 }
 
-bool sce_irodb_t::read(boost::filesystem::path filepath)
+bool sce_irodb_t::read(psvpfs::path filepath)
 {
    std::ifstream inputStream(filepath.generic_string().c_str(), std::ios::in | std::ios::binary);
 
@@ -542,18 +542,18 @@ bool sce_irodb_t::read(boost::filesystem::path filepath)
    inputStream.seekg(0, std::ios::end);
    std::uint64_t fileSize = inputStream.tellg();
    inputStream.seekg(0, std::ios::beg);
-   
+
    //read header
    if(!m_dbHeader->read(inputStream, fileSize))
       return false;
-   
+
    //it looks like unicv file is split into groups of SCEIFTBL chunks (blocks)
    //where each group corresponds to file or directory
    //however there is no obvious way to determine number of chunks in each group
 
    //the only way is to calculate total number of chunks (blocks)
    //and read them as stream splitting it into groups in the process
-   
+
    std::uint64_t nBlocks = m_dbHeader->get_dataSize() / m_dbHeader->get_blockSize();
    std::uint64_t tailSize = m_dbHeader->get_dataSize() % m_dbHeader->get_blockSize();
 
@@ -594,10 +594,10 @@ bool sce_irodb_t::read(boost::filesystem::path filepath)
    return true;
 }
 
-bool sce_icvdb_t::read(boost::filesystem::path filepath)
+bool sce_icvdb_t::read(psvpfs::path filepath)
 {
    std::uint64_t index = 0;
-   for(auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(filepath), boost::filesystem::directory_iterator()))
+   for(auto& entry : psvpfs::directory_iterator(filepath))
    {
       std::ifstream inputStream(entry.path().generic_string().c_str(), std::ios::in | std::ios::binary);
 
