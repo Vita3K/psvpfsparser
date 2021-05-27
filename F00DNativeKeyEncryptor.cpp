@@ -2,6 +2,8 @@
 
 #include "Utils.h"
 
+#include <cstring>
+
 unsigned char contract_key0[0x10] = {0xE1, 0x22, 0x13, 0xB4, 0x80, 0x16, 0xB0, 0xE9, 0x9A, 0xB8, 0x1F, 0x8E, 0xC0, 0x2A, 0xD4, 0xA2};
 
 F00DNativeKeyEncryptor::F00DNativeKeyEncryptor(std::shared_ptr<ICryptoOperations> cryptops)
@@ -26,7 +28,7 @@ int F00DNativeKeyEncryptor::kprx_auth_service_0x50001(const unsigned char* key, 
 
    if(key_size <= 0 || key_size > 0x20)
       return -1;
-      
+
    memcpy(key_dest, key, key_size);
 
    //execute command according to specific key id
@@ -39,7 +41,7 @@ int F00DNativeKeyEncryptor::kprx_auth_service_0x50001(const unsigned char* key, 
 
    if(m_cryptops->aes_ecb_decrypt(key_dest, key_dest, key_size, contract_key0, 0x80) < 0)
       return -1;
-   
+
    memcpy(drv_key, key_dest, key_size);
 
    return 0;
@@ -47,7 +49,7 @@ int F00DNativeKeyEncryptor::kprx_auth_service_0x50001(const unsigned char* key, 
 
 int F00DNativeKeyEncryptor::encrypt_key(const unsigned char* key, int key_size, unsigned char* drv_key)
 {
-   if(key_size != 0x80 && 
+   if(key_size != 0x80 &&
       // key_size != 0xC0 && //TODO: need to implement padding
       key_size != 0x100)
       return -1;
@@ -76,7 +78,7 @@ int F00DNativeKeyEncryptor::encrypt_key(const unsigned char* key, int key_size, 
 
 void F00DNativeKeyEncryptor::print_cache(std::ostream& os, std::string sep) const
 {
-   os << "Number of items in cache: " << m_keyCache.size() << std::endl; 
+   os << "Number of items in cache: " << m_keyCache.size() << std::endl;
 
    //its ok to print whole cache since we only expect one item anyway
 

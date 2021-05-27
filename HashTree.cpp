@@ -4,6 +4,8 @@
 
 #include "Utils.h"
 
+#include <cstring>
+
 int64_t page2off(std::uint32_t page, std::uint32_t pageSize)
 {
    return page * pageSize + pageSize;

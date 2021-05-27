@@ -1,6 +1,6 @@
-#include <fcntl.h>  
-#include <stdlib.h>  
-#include <stdio.h>  
+#include <fcntl.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include <iostream>
 #include <fstream>
@@ -11,11 +11,6 @@
 #include <map>
 #include <iomanip>
 #include <set>
-
-#include <boost/filesystem.hpp>
-#include <boost/range/adaptor/reversed.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include "FilesDbParser.h"
 #include "UnicvDbParser.h"
@@ -29,19 +24,19 @@
 
 bool is_directory(sce_ng_pfs_file_types type)
 {
-   return type == sce_ng_pfs_file_types::normal_directory || 
-          type == sce_ng_pfs_file_types::sys_directory || 
+   return type == sce_ng_pfs_file_types::normal_directory ||
+          type == sce_ng_pfs_file_types::sys_directory ||
           type == sce_ng_pfs_file_types::acid_directory;
 }
 
 bool is_valid_file_type(sce_ng_pfs_file_types type)
 {
-   return type == sce_ng_pfs_file_types::unexisting || 
-          type == sce_ng_pfs_file_types::normal_file || 
+   return type == sce_ng_pfs_file_types::unexisting ||
+          type == sce_ng_pfs_file_types::normal_file ||
           type == sce_ng_pfs_file_types::normal_directory ||
           type == sce_ng_pfs_file_types::unencrypted_system_file_rw ||
           type == sce_ng_pfs_file_types::encrypted_system_file_rw ||
-          type == sce_ng_pfs_file_types::sys_directory || 
+          type == sce_ng_pfs_file_types::sys_directory ||
           type == sce_ng_pfs_file_types::unencrypted_system_file_ro ||
           type == sce_ng_pfs_file_types::encrypted_system_file_ro ||
           type == sce_ng_pfs_file_types::acid_directory;
@@ -50,7 +45,7 @@ bool is_valid_file_type(sce_ng_pfs_file_types type)
 bool is_encrypted(sce_ng_pfs_file_types type)
 {
    return type == sce_ng_pfs_file_types::encrypted_system_file_rw ||
-          type == sce_ng_pfs_file_types::encrypted_system_file_ro || 
+          type == sce_ng_pfs_file_types::encrypted_system_file_ro ||
           type == sce_ng_pfs_file_types::normal_file;
 }
 
@@ -94,8 +89,8 @@ std::string fileTypeToString(sce_ng_pfs_file_types ft)
 
 //------------ implementation -----------------
 
-FilesDbParser::FilesDbParser(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output, 
-                             const unsigned char* klicensee, boost::filesystem::path titleIdPath)
+FilesDbParser::FilesDbParser(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
+                             const unsigned char* klicensee, psvpfs::path titleIdPath)
    : m_cryptops(cryptops), m_iF00D(iF00D), m_output(output), m_titleIdPath(titleIdPath)
 {
    memcpy(m_klicensee, klicensee, 0x10);
@@ -106,10 +101,10 @@ bool FilesDbParser::verify_header_icv(std::ifstream& inputStream, const unsigned
    m_output << "verifying header..." << std::endl;
 
    //verify header signature
-   
+
    char rsa_sig0_copy[0x100];
    char icv_hmac_sig_copy[0x14];
-   
+
    memcpy(rsa_sig0_copy, m_header.rsa_sig0, 0x100);
    memcpy(icv_hmac_sig_copy, m_header.header_icv, 0x14);
    memset(m_header.header_icv, 0, 0x14);
@@ -159,7 +154,7 @@ bool FilesDbParser::verify_header_icv(std::ifstream& inputStream, const unsigned
    }
 
    m_output << "root icv is valid" << std::endl;
-   
+
    //seek back to the beginning of tail
    inputStream.seekg(chunksBeginPos, std::ios_base::beg);
 
@@ -168,14 +163,14 @@ bool FilesDbParser::verify_header_icv(std::ifstream& inputStream, const unsigned
 
 bool FilesDbParser::get_isUnicv(bool& isUnicv)
 {
-   boost::filesystem::path root(m_titleIdPath);
+   psvpfs::path root(m_titleIdPath);
 
-   boost::filesystem::path filepath = root / "sce_pfs" / "unicv.db";
+   psvpfs::path filepath = root / "sce_pfs" / "unicv.db";
 
-   if(!boost::filesystem::exists(filepath))
+   if(!psvpfs::exists(filepath))
    {
-      boost::filesystem::path filepath2 = root / "sce_pfs" / "icv.db";
-      if(!boost::filesystem::exists(filepath2) || !boost::filesystem::is_directory(filepath2))
+      psvpfs::path filepath2 = root / "sce_pfs" / "icv.db";
+      if(!psvpfs::exists(filepath2) || !psvpfs::is_directory(filepath2))
       {
          m_output << "failed to find unicv.db file or icv.db folder" << std::endl;
 
@@ -236,7 +231,7 @@ bool FilesDbParser::validate_header(uint32_t dataSize)
          return false;
       }
    }
-   
+
    //check key_id - should be 0 - we do not expect any other values or the code has to be changed
    if(m_header.key_id != 0)
    {
@@ -298,7 +293,7 @@ bool FilesDbParser::parseFilesDb(std::ifstream& inputStream, std::vector<sce_ng_
    //verify header
    if(!verify_header_icv(inputStream, secret))
       return false;
-   
+
    //save current position
    int64_t chunksBeginPos = inputStream.tellg();
 
@@ -334,7 +329,7 @@ bool FilesDbParser::parseFilesDb(std::ifstream& inputStream, std::vector<sce_ng_
       inputStream.read((char*)&block.header, sizeof(sce_ng_pfs_block_header_t));
 
       //verify header
-      if(block.header.type != sce_ng_pfs_block_types::child && 
+      if(block.header.type != sce_ng_pfs_block_types::child &&
          block.header.type != sce_ng_pfs_block_types::root)
       {
          m_output << "Unexpected type" << std::endl;
@@ -384,7 +379,7 @@ bool FilesDbParser::parseFilesDb(std::ifstream& inputStream, std::vector<sce_ng_
             return false;
          }
       }
-      
+
       //skip will be faster
       //inputStream.seekg(nUnusedSize1, ios_base::cur);
 
@@ -468,7 +463,7 @@ bool FilesDbParser::parseFilesDb(std::ifstream& inputStream, std::vector<sce_ng_
 
 //build child index -> parent index relationship map
 bool FilesDbParser::constructDirmatrix(const std::vector<sce_ng_pfs_block_t>& blocks, std::map<std::uint32_t, std::uint32_t>& dirMatrix)
-{   
+{
    m_output << "Building directory matrix..." << std::endl;
 
    for(auto& block : blocks)
@@ -525,7 +520,7 @@ bool FilesDbParser::constructFileMatrix(std::vector<sce_ng_pfs_block_t>& blocks,
          std::string fileName = std::string((const char*)block.files[i].fileName);
 
          if(block.m_infos[i].header.size == 0)
-         {   
+         {
             if(is_unexisting(block.m_infos[i].header.type))
             {
                //m_output << "[EMPTY] File " << fileName << " index " << child << std::endl;
@@ -597,7 +592,7 @@ bool FilesDbParser::flattenBlocks(const std::vector<sce_ng_pfs_block_t>& blocks,
                return false;
             }
          }
-            
+
          flatBlocks.push_back(sce_ng_pfs_flat_block_t());
          sce_ng_pfs_flat_block_t& fb = flatBlocks.back();
 
@@ -658,7 +653,7 @@ bool FilesDbParser::constructDirPaths(const std::map<std::uint32_t, std::uint32_
             m_output << "Missing parent directory index " << parentIndex  << std::endl;
             return false;
          }
-         
+
          indexes.push_back(directory->first); //child - directory that was found
          parentIndex = directory->second; //parent - specify next directory to search
       }
@@ -692,10 +687,9 @@ bool FilesDbParser::constructDirPaths(const std::map<std::uint32_t, std::uint32_
       std::string dirName((const char*)dirFlatBlock->file.fileName);
 
       //construct full path
-      boost::filesystem::path path = m_titleIdPath;
-      for(auto& dname : boost::adaptors::reverse(dirNames))
-      {
-         path /= dname;
+      psvpfs::path path = m_titleIdPath;
+      for(int i = dirNames.size(); i > 0; i--) {
+         path /= dirNames[i - 1];
       }
       path /= dirName;
 
@@ -738,7 +732,7 @@ bool FilesDbParser::constructFilePaths(const std::map<std::uint32_t, std::uint32
             m_output << "Missing parent directory index " << parentIndex  << std::endl;
             return false;
          }
-         
+
          indexes.push_back(directory->first); //child - directory that was found
          parentIndex = directory->second; //parent - specify next directory to search
       }
@@ -772,10 +766,9 @@ bool FilesDbParser::constructFilePaths(const std::map<std::uint32_t, std::uint32
       std::string fileName((const char*)fileFlatBlock->file.fileName);
 
       //construct full path
-      boost::filesystem::path path = m_titleIdPath;
-      for(auto& dname : boost::adaptors::reverse(dirNames))
-      {
-         path /= dname;
+      psvpfs::path path = m_titleIdPath;
+      for(int i = dirNames.size(); i > 0; i--) {
+         path /= dirNames[i - 1];
       }
       path /= fileName;
 
@@ -792,7 +785,7 @@ bool FilesDbParser::constructFilePaths(const std::map<std::uint32_t, std::uint32
 }
 
 //checks that directory exists
-bool FilesDbParser::linkDirpaths(const std::set<boost::filesystem::path> real_directories)
+bool FilesDbParser::linkDirpaths(const std::set<psvpfs::path> real_directories)
 {
    m_output << "Linking dir paths..." << std::endl;
 
@@ -809,7 +802,7 @@ bool FilesDbParser::linkDirpaths(const std::set<boost::filesystem::path> real_di
             break;
          }
       }
-      
+
       if(!found)
       {
          m_output << "Directory " << dir.path() << " does not exist" << std::endl;
@@ -822,7 +815,7 @@ bool FilesDbParser::linkDirpaths(const std::set<boost::filesystem::path> real_di
 
 //checks that files exist
 //checks that file size is correct
-bool FilesDbParser::linkFilepaths(const std::set<boost::filesystem::path> real_files, std::uint32_t fileSectorSize)
+bool FilesDbParser::linkFilepaths(const std::set<psvpfs::path> real_files, std::uint32_t fileSectorSize)
 {
    m_output << "Linking file paths..." << std::endl;
 
@@ -846,7 +839,7 @@ bool FilesDbParser::linkFilepaths(const std::set<boost::filesystem::path> real_f
          return false;
       }
 
-      boost::uintmax_t size = file.path().file_size();
+      std::uintmax_t size = file.path().file_size();
       if(size != file.file.m_info.header.size)
       {
          if((size % fileSectorSize) > 0)
@@ -861,7 +854,7 @@ bool FilesDbParser::linkFilepaths(const std::set<boost::filesystem::path> real_f
 }
 
 //returns number of extra files in real file system which are not present in files.db
-int FilesDbParser::matchFileLists(const std::set<boost::filesystem::path>& files)
+int FilesDbParser::matchFileLists(const std::set<psvpfs::path>& files)
 {
    m_output << "Matching file paths..." << std::endl;
 
@@ -928,7 +921,7 @@ int FilesDbParser::matchFileLists(const std::set<boost::filesystem::path>& files
 //parses files.db and flattens it into file list
 int FilesDbParser::parse()
 {
-   if(!boost::filesystem::exists(m_titleIdPath))
+   if(!psvpfs::exists(m_titleIdPath))
    {
       m_output << "Root directory does not exist" << std::endl;
       return -1;
@@ -936,8 +929,8 @@ int FilesDbParser::parse()
 
    m_output << "parsing  files.db..." << std::endl;
 
-   boost::filesystem::path filepath = m_titleIdPath / "sce_pfs" / "files.db";
-   if(!boost::filesystem::exists(filepath))
+   psvpfs::path filepath = m_titleIdPath / "sce_pfs" / "files.db";
+   if(!psvpfs::exists(filepath))
    {
       m_output << "failed to find files.db file" << std::endl;
       return -1;
@@ -965,7 +958,7 @@ int FilesDbParser::parse()
    std::map<std::uint32_t, std::uint32_t> fileMatrix;
    if(!constructFileMatrix(blocks, fileMatrix))
       return -1;
-   
+
    //convert list of blocks to list of files
    std::vector<sce_ng_pfs_flat_block_t> flatBlocks;
    if(!flattenBlocks(blocks, flatBlocks))
@@ -981,8 +974,8 @@ int FilesDbParser::parse()
       return -1;
 
    //get the list of real filesystem paths
-   std::set<boost::filesystem::path> files;
-   std::set<boost::filesystem::path> directories;
+   std::set<psvpfs::path> files;
+   std::set<psvpfs::path> directories;
    getFileListNoPfs(m_titleIdPath, files, directories);
 
    //link result dirs to real filesystem

@@ -3,8 +3,8 @@
 #include "MerkleTree.hpp"
 #include "PfsKeyGenerator.h"
 
-PfsFile::PfsFile(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output, 
-                 const unsigned char* klicensee, boost::filesystem::path titleIdPath,
+PfsFile::PfsFile(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
+                 const unsigned char* klicensee, psvpfs::path titleIdPath,
                  const sce_ng_pfs_file_t& file, const sce_junction& filepath, const sce_ng_pfs_header_t& ngpfs, std::shared_ptr<sce_iftbl_base_t> table)
    : m_cryptops(cryptops), m_iF00D(iF00D), m_output(output), m_titleIdPath(titleIdPath),
      m_file(file), m_filepath(filepath), m_ngpfs(ngpfs), m_table(table)
@@ -24,7 +24,7 @@ int collect_leaf(std::shared_ptr<merkle_tree_node<icv> > node, void* ctx)
 }
 
 int PfsFile::init_crypt_ctx(CryptEngineWorkCtx* work_ctx, sig_tbl_t& block, std::uint32_t sector_base, std::uint32_t tail_size, unsigned char* source) const
-{     
+{
    memset(&m_data, 0, sizeof(CryptEngineData));
    m_data.klicensee = m_klicensee;
    m_data.files_salt = m_ngpfs.files_salt;
@@ -51,7 +51,7 @@ int PfsFile::init_crypt_ctx(CryptEngineWorkCtx* work_ctx, sig_tbl_t& block, std:
    setup_crypt_packet_keys(m_cryptops, m_iF00D, &m_data, &drv_ctx); //derive dec_key, tweak_enc_key, secret
 
    //--------------------------------
-   
+
    memset(&m_sub_ctx, 0, sizeof(CryptEngineSubctx));
    m_sub_ctx.opt_code = CRYPT_ENGINE_READ;
    m_sub_ctx.data = &m_data;
@@ -119,16 +119,16 @@ int PfsFile::init_crypt_ctx(CryptEngineWorkCtx* work_ctx, sig_tbl_t& block, std:
    m_sub_ctx.signature_table = m_signatureTable.data();
    m_sub_ctx.work_buffer0 = source;
    m_sub_ctx.work_buffer1 = source;
-   
+
    //--------------------------------
-   
+
    work_ctx->subctx = &m_sub_ctx;
    work_ctx->error = 0;
 
    return 0;
 }
 
-int PfsFile::decrypt_icv_file(boost::filesystem::path destination_root) const
+int PfsFile::decrypt_icv_file(psvpfs::path destination_root) const
 {
    //create new file
 
@@ -163,11 +163,11 @@ int PfsFile::decrypt_icv_file(boost::filesystem::path destination_root) const
    {
       std::vector<std::uint8_t> buffer(static_cast<std::vector<std::uint8_t>::size_type>(fileSize));
       inputStream.read((char*)buffer.data(), fileSize);
-         
+
       std::uint32_t tail_size = fileSize % m_table->get_header()->get_fileSectorSize();
       if(tail_size == 0)
          tail_size = m_table->get_header()->get_fileSectorSize();
-         
+
       CryptEngineWorkCtx work_ctx;
       if(init_crypt_ctx(&work_ctx, m_table->m_blocks.front(), 0, tail_size, buffer.data()) < 0)
          return -1;
@@ -201,7 +201,7 @@ int PfsFile::decrypt_icv_file(boost::filesystem::path destination_root) const
    return 0;
 }
 
-int PfsFile::decrypt_unicv_file(boost::filesystem::path destination_root) const
+int PfsFile::decrypt_unicv_file(psvpfs::path destination_root) const
 {
    //create new file
 
@@ -232,11 +232,11 @@ int PfsFile::decrypt_unicv_file(boost::filesystem::path destination_root) const
    {
       std::vector<std::uint8_t> buffer(static_cast<std::vector<std::uint8_t>::size_type>(fileSize));
       inputStream.read((char*)buffer.data(), fileSize);
-         
+
       std::uint32_t tail_size = fileSize % m_table->get_header()->get_fileSectorSize();
       if(tail_size == 0)
          tail_size = m_table->get_header()->get_fileSectorSize();
-         
+
       CryptEngineWorkCtx work_ctx;
       if(init_crypt_ctx(&work_ctx, m_table->m_blocks.front(), 0, tail_size, buffer.data()) < 0)
          return -1;
@@ -280,7 +280,7 @@ int PfsFile::decrypt_unicv_file(boost::filesystem::path destination_root) const
             std::uint32_t tail_size = bytes_left % m_table->get_header()->get_fileSectorSize();
             if(tail_size == 0)
                tail_size = m_table->get_header()->get_fileSectorSize();
-         
+
             CryptEngineWorkCtx work_ctx;
             if(init_crypt_ctx(&work_ctx, b, sector_base, tail_size, buffer.data()) < 0)
                return -1;
@@ -355,7 +355,7 @@ int PfsFile::decrypt_unicv_file(boost::filesystem::path destination_root) const
          }
       }
    }
-   
+
    inputStream.close();
 
    outputStream.close();
@@ -363,7 +363,7 @@ int PfsFile::decrypt_unicv_file(boost::filesystem::path destination_root) const
    return 0;
 }
 
-int PfsFile::decrypt_file(boost::filesystem::path destination_root) const
+int PfsFile::decrypt_file(psvpfs::path destination_root) const
 {
    if(img_spec_to_is_unicv(m_ngpfs.image_spec))
       return decrypt_unicv_file(destination_root);

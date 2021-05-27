@@ -5,11 +5,11 @@
 #include <iostream>
 #include <set>
 
-#include <boost/filesystem.hpp>
-#include <boost/range/adaptor/reversed.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-
 #include "Utils.h"
+
+#ifdef PSVPFS_BOOST
+#include <boost/algorithm/string.hpp>
+#endif
 
 bool isZeroVector(const std::vector<std::uint8_t>& data)
 {
@@ -53,58 +53,64 @@ int print_bytes(const unsigned char* bytes, int length)
 }
 
 //get files recoursively
-void getFileListNoPfs(boost::filesystem::path root_path, std::set<boost::filesystem::path>& files, std::set<boost::filesystem::path>& directories)
+void getFileListNoPfs(psvpfs::path root_path, std::set<psvpfs::path>& files, std::set<psvpfs::path>& directories)
 {
    if (!root_path.empty())
    {
-      boost::filesystem::path apk_path(root_path);
-      boost::filesystem::recursive_directory_iterator end;
+      psvpfs::path apk_path(root_path);
+      psvpfs::recursive_directory_iterator end;
 
-      for (boost::filesystem::recursive_directory_iterator i(apk_path); i != end; ++i)
+      for (psvpfs::recursive_directory_iterator i(apk_path); i != end; ++i)
       {
-         const boost::filesystem::path cp = (*i);
+         const psvpfs::path cp = (*i);
 
          //skip paths that are not included in files.db
          //i.nopush(true) will skip recursion into directory
 
          //skip pfs directory
-         if(cp.filename() == boost::filesystem::path("sce_pfs")) {
+         if(cp.filename() == psvpfs::path("sce_pfs")) {
+#ifdef PSVPFS_BOOST
             i.no_push(true);
+#endif
             continue;
          }
 
          //skip packages
-         if(cp == (root_path / boost::filesystem::path("sce_sys") / boost::filesystem::path("package"))) {
+         if(cp == (root_path / "sce_sys" / "package")) {
+#ifdef PSVPFS_BOOST
             i.no_push(true);
+#endif
             continue;
          }
 
          //skip pfs inside sce_sys (for ADDCONT)
-         if(boost::ends_with(cp, boost::filesystem::path("sce_sys")) &&
-               cp != root_path / boost::filesystem::path("sce_sys") &&
-               boost::filesystem::exists(cp / boost::filesystem::path("keystone"))) {
+         if(cp.stem().string() == "sce_sys" &&
+            cp != root_path / psvpfs::path("sce_sys") &&
+               psvpfs::exists(cp / psvpfs::path("keystone"))) {
+#ifdef PSVPFS_BOOST
             i.no_push(true);
+#endif
             continue;
          }
 
          //add file or directory
-         if(boost::filesystem::is_directory(cp))
-            directories.insert(boost::filesystem::path(cp.generic_string())); //recreate from generic string to normalize slashes
+         if(psvpfs::is_directory(cp))
+            directories.insert(psvpfs::path(cp.generic_string())); //recreate from generic string to normalize slashes
          else
-            files.insert(boost::filesystem::path(cp.generic_string())); //recreate from generic string to normalize slashes
+            files.insert(psvpfs::path(cp.generic_string())); //recreate from generic string to normalize slashes
       }
    }
 }
 
-boost::filesystem::path source_path_to_dest_path(const boost::filesystem::path& source_root, const boost::filesystem::path& dest_root, const boost::filesystem::path& source_path) {
-   boost::filesystem::path dest_path = dest_root / boost::filesystem::relative(source_path, source_root);
-   return boost::filesystem::path(dest_path.generic_string());
+psvpfs::path source_path_to_dest_path(const psvpfs::path& source_root, const psvpfs::path& dest_root, const psvpfs::path& source_path) {
+   psvpfs::path dest_path = dest_root / psvpfs::relative(source_path, source_root);
+   return psvpfs::path(dest_path.generic_string());
 }
 
 //===
 
 
-sce_junction::sce_junction(boost::filesystem::path value)
+sce_junction::sce_junction(psvpfs::path value)
    : m_value(value),
       m_real(std::string())
 {
@@ -121,8 +127,9 @@ sce_junction::sce_junction(const sce_junction& other)
 //this is because virtual path in files.db may not exactly match to physical path
 //in real world - windows is case insensitive while linux is case sensitive
 //it seems that pfs assumes windows as its prior filesystem for tools
-bool sce_junction::is_equal(boost::filesystem::path p) const
+bool sce_junction::is_equal(psvpfs::path p) const
 {
+#ifdef PSVPFS_BOOST
    std::string left = m_value.generic_string();
    boost::to_upper(left);
 
@@ -130,6 +137,9 @@ bool sce_junction::is_equal(boost::filesystem::path p) const
    boost::to_upper(right);
 
    return left == right;
+#else
+   return psvpfs::equivalent(m_value, p);
+#endif
 }
 
 bool sce_junction::is_equal(const sce_junction& other) const
@@ -142,7 +152,7 @@ bool sce_junction::operator<(const sce_junction& other)
    return m_value < other.m_value;
 }
 
-bool sce_junction::operator<(const sce_junction& other) const 
+bool sce_junction::operator<(const sce_junction& other) const
 {
    return m_value < other.m_value;
 }
@@ -153,9 +163,9 @@ void sce_junction::link_to_real(const sce_junction& p) const
 }
 
 //get size of real file linked with this junction
-boost::uintmax_t sce_junction::file_size() const
+std::uintmax_t sce_junction::file_size() const
 {
-   return boost::filesystem::file_size(m_real);
+   return psvpfs::file_size(m_real);
 }
 
 //open real file linked with this junction
@@ -177,30 +187,30 @@ bool sce_junction::open(std::ifstream& in) const
 }
 
 //create empty directory in destination root using path from this junction
-bool sce_junction::create_empty_directory(boost::filesystem::path source_root, boost::filesystem::path destination_root) const
+bool sce_junction::create_empty_directory(psvpfs::path source_root, psvpfs::path destination_root) const
 {
    //construct new path
-   boost::filesystem::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
+   psvpfs::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
 
    //create all directories on the way
-   
-   boost::filesystem::create_directories(new_path);
+
+   psvpfs::create_directories(new_path);
 
    return true;
 }
 
 //create empty file in destination root using path from this junction
 //leaves stream opened for other operations like write
-bool sce_junction::create_empty_file(boost::filesystem::path source_root, boost::filesystem::path destination_root, std::ofstream& outputStream) const
+bool sce_junction::create_empty_file(psvpfs::path source_root, psvpfs::path destination_root, std::ofstream& outputStream) const
 {
    //construct new path
-   boost::filesystem::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
-   boost::filesystem::path new_directory = new_path;
+   psvpfs::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
+   psvpfs::path new_directory = new_path;
    new_directory.remove_filename();
 
    //create all directories on the way
-   
-   boost::filesystem::create_directories(new_directory);
+
+   psvpfs::create_directories(new_directory);
 
    //create new file
 
@@ -215,7 +225,7 @@ bool sce_junction::create_empty_file(boost::filesystem::path source_root, boost:
 }
 
 //create empty file in destination root using path from this junction
-bool sce_junction::create_empty_file(boost::filesystem::path source_root, boost::filesystem::path destination_root) const
+bool sce_junction::create_empty_file(psvpfs::path source_root, psvpfs::path destination_root) const
 {
    std::ofstream outputStream;
    if(create_empty_file(source_root, destination_root, outputStream))
@@ -230,25 +240,25 @@ bool sce_junction::create_empty_file(boost::filesystem::path source_root, boost:
 }
 
 //copy file in destination root using path from this junction
-bool sce_junction::copy_existing_file(boost::filesystem::path source_root, boost::filesystem::path destination_root) const
+bool sce_junction::copy_existing_file(psvpfs::path source_root, psvpfs::path destination_root) const
 {
    //construct new path
-   boost::filesystem::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
-   boost::filesystem::path new_directory = new_path;
+   psvpfs::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
+   psvpfs::path new_directory = new_path;
    new_directory.remove_filename();
 
    //create all directories on the way
-   
-   boost::filesystem::create_directories(new_directory);
+
+   psvpfs::create_directories(new_directory);
 
    //copy the file
 
-   if(boost::filesystem::exists(new_path))
-      boost::filesystem::remove(new_path);
-   
-   boost::filesystem::copy(m_real.generic_string(), new_path);
+   if(psvpfs::exists(new_path))
+      psvpfs::remove(new_path);
 
-   if(!boost::filesystem::exists(new_path))
+   psvpfs::copy(m_real.generic_string(), new_path);
+
+   if(!psvpfs::exists(new_path))
    {
       std::cout << "Failed to copy: " << m_real.generic_string() << " to " << new_path.generic_string() << std::endl;
       return false;
@@ -258,20 +268,20 @@ bool sce_junction::copy_existing_file(boost::filesystem::path source_root, boost
 }
 
 
-bool sce_junction::copy_existing_file(boost::filesystem::path source_root, boost::filesystem::path destination_root, std::uintmax_t size) const
+bool sce_junction::copy_existing_file(psvpfs::path source_root, psvpfs::path destination_root, std::uintmax_t size) const
 {
    if (!copy_existing_file(source_root, destination_root))
       return false;
 
    // trim size
-   boost::filesystem::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
-   boost::filesystem::resize_file(new_path, size);
+   psvpfs::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
+   psvpfs::resize_file(new_path, size);
 
    return true;
 }
 
 std::ostream& operator<<(std::ostream& os, const sce_junction& p)
-{  
-   os << p.m_value.generic_string();  
-   return os;  
+{
+   os << p.m_value.generic_string();
+   return os;
 }

@@ -2,20 +2,20 @@
 
 #include <map>
 
-#include <boost/filesystem.hpp>
-
 #include "IF00DKeyEncryptor.h"
+
+#include "LocalFilesystem.h"
 
 class F00DFileKeyEncryptor : public IF00DKeyEncryptor
 {
 private:
-   boost::filesystem::path m_filePath;
+   psvpfs::path m_filePath;
 
    std::map<std::string, std::string> m_keyCache;
    bool m_isCacheLoaded;
 
 public:
-   F00DFileKeyEncryptor(boost::filesystem::path filePath);
+   F00DFileKeyEncryptor(psvpfs::path filePath);
 
 private:
    int load_cache_flat_file();

@@ -13,6 +13,4 @@ struct PsvPfsParserConfig {
     std::string f00d_arg;
 };
 
-int parse_options(int argc, char *argv[], PsvPfsParserConfig &cfg);
-
 int execute(std::string &zrif, std::string &title_src, std::string &title_dst, F00DEncryptorTypes type, std::string &f00d_arg);
