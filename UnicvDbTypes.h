@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <cstring>
+#include <string>
 
 #include "LocalFilesystem.h"
 
