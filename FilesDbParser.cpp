@@ -87,6 +87,11 @@ std::string fileTypeToString(sce_ng_pfs_file_types ft)
    }
 }
 
+void to_uppercase(std::string& str) 
+{
+    std::transform(str.begin(), str.end(), str.begin(), static_cast<int (*)(int)>(std::toupper));
+}
+
 //------------ implementation -----------------
 
 FilesDbParser::FilesDbParser(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
@@ -789,25 +794,31 @@ bool FilesDbParser::linkDirpaths(const std::set<psvpfs::path> real_directories)
 {
    m_output << "Linking dir paths..." << std::endl;
 
+   std::map<std::string, const psvpfs::path *> real_dir_map;
+   for (auto &real_dir : real_directories) {
+       std::string path = real_dir.string();
+       to_uppercase(path);
+
+       if (real_dir_map.count(path) > 0) {
+           m_output << "Directory " << real_dir << " uppercase path matches another directory." << std::endl;
+           return false;
+       }
+
+       real_dir_map[path] = &real_dir;
+   }
+
    for(auto& dir : m_dirs)
    {
-      //comparison should be done with is_equal (upper case) so it can not be replaced by .find()
-      bool found = false;
-      for(auto& real_dir : real_directories)
-      {
-         if(dir.path().is_equal(real_dir))
-         {
-            dir.path().link_to_real(real_dir);
-            found = true;
-            break;
-         }
-      }
+      std::string path = dir.path().get_value().string();
+      to_uppercase(path);
 
-      if(!found)
+      auto it = real_dir_map.find(path);
+      if (it == real_dir_map.end())
       {
          m_output << "Directory " << dir.path() << " does not exist" << std::endl;
          return false;
       }
+      dir.path().link_to_real(*it->second);
    }
 
    return true;
@@ -819,25 +830,32 @@ bool FilesDbParser::linkFilepaths(const std::set<psvpfs::path> real_files, std::
 {
    m_output << "Linking file paths..." << std::endl;
 
+   std::map<std::string,const psvpfs::path*> real_files_map;
+   for (auto &real_file : real_files) {
+       std::string path = real_file.string();
+       to_uppercase(path);
+
+       if (real_files_map.count(path) > 0) {
+           m_output << "File " << real_file << " uppercase path matches another file." << std::endl;
+           return false;
+       }
+
+       real_files_map[path] = &real_file;
+   }
+
    for(auto& file : m_files)
    {
-      //comparison should be done with is_equal (upper case) so it can not be replaced by .find()
-      bool found = false;
-      for(auto& real_file : real_files)
-      {
-         if(file.path().is_equal(real_file))
-         {
-            file.path().link_to_real(real_file);
-            found = true;
-            break;
-         }
-      }
+      std::string path = file.path().get_value().string();
+      to_uppercase(path);
 
-      if(!found)
+      auto it = real_files_map.find(path);
+      if(it == real_files_map.end())
       {
          m_output << "File " << file.path() << " does not exist" << std::endl;
          return false;
       }
+
+      file.path().link_to_real(*it->second);
 
       std::uintmax_t size = file.path().file_size();
       if(size != file.file.m_info.header.size)
@@ -858,24 +876,32 @@ int FilesDbParser::matchFileLists(const std::set<psvpfs::path>& files)
 {
    m_output << "Matching file paths..." << std::endl;
 
+   std::map<std::string, const psvpfs::path *> files_map;
+   for (auto &file : files) {
+       std::string path = file.string();
+       to_uppercase(path);
+
+       files_map[path] = &file;
+   }
+
+   std::map<std::string, const sce_ng_pfs_file_t *> member_files_map;
+   for (auto &file : m_files) {
+       std::string path = file.path().get_value().string();
+       to_uppercase(path);
+
+       member_files_map[path] = &file;
+   }
+
    int real_extra = 0;
 
    bool print = false;
    for(auto& rp : files)
    {
-      bool found = false;
+      std::string path = rp.string();
+      to_uppercase(path);
 
-      //comparison should be done with is_equal (upper case) so it can not be replaced by .find()
-      for(auto& vp : m_files)
-      {
-         if(vp.path().is_equal(rp))
-         {
-            found = true;
-            break;
-         }
-      }
-
-      if(!found)
+      auto it = member_files_map.find(path);
+      if(it == member_files_map.end())
       {
          if(!print)
          {
@@ -891,19 +917,11 @@ int FilesDbParser::matchFileLists(const std::set<psvpfs::path>& files)
    print = false;
    for(auto& vp : m_files)
    {
-      bool found = false;
+      std::string path = vp.path().get_value().string();
+      to_uppercase(path);
 
-      //comparison should be done with is_equal (upper case) so it can not be replaced by .find()
-      for(auto& rp : files)
-      {
-         if(vp.path().is_equal(rp))
-         {
-            found = true;
-            break;
-         }
-      }
-
-      if(!found)
+      auto it = files_map.find(path);
+      if (it == files_map.end())
       {
          if(!print)
          {

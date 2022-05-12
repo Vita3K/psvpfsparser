@@ -280,6 +280,10 @@ bool sce_junction::copy_existing_file(psvpfs::path source_root, psvpfs::path des
    return true;
 }
 
+const psvpfs::path &sce_junction::get_value() const {
+    return m_value;
+}
+
 std::ostream& operator<<(std::ostream& os, const sce_junction& p)
 {
    os << p.m_value.generic_string();
