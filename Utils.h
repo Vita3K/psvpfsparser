@@ -76,6 +76,9 @@ public:
    //copy file with specific size in destination root using path from this junction
    bool copy_existing_file(psvpfs::path source_root, psvpfs::path destination_root, std::uintmax_t size) const;
 
+   //return corresponding virtual path
+   const psvpfs::path& get_value() const;
+
 public:
    //this operator should only be used for printing to console!
    friend std::ostream& operator<<(std::ostream& os, const sce_junction& p);
