@@ -5,7 +5,7 @@
 #include <cstring>
 
 PfsFilesystem::PfsFilesystem(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
-                 const unsigned char* klicensee, psvpfs::path titleIdPath)
+                 const unsigned char* klicensee, const psvpfs::path& titleIdPath)
    : m_cryptops(cryptops), m_iF00D(iF00D), m_output(output), m_titleIdPath(titleIdPath)
 {
    memcpy(m_klicensee, klicensee, 0x10);
@@ -35,7 +35,7 @@ static void to_uppercase(std::string &str) {
    std::transform(str.begin(), str.end(), str.begin(), static_cast<int (*)(int)>(std::toupper));
 }
 
-int PfsFilesystem::decrypt_files(psvpfs::path destTitleIdPath) const
+int PfsFilesystem::decrypt_files(const psvpfs::path& destTitleIdPath) const
 {
    const sce_ng_pfs_header_t& ngpfs = m_filesDbParser->get_header();
    const std::vector<sce_ng_pfs_file_t>& files = m_filesDbParser->get_files();

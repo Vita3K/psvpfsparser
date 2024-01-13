@@ -14,7 +14,7 @@
 #include "PsvPfsParserConfig.h"
 #include "LocalKeyGenerator.h"
 
-int execute(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, const unsigned char *klicensee, psvpfs::path titleIdPath, psvpfs::path destTitleIdPath) {
+int execute(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, const unsigned char *klicensee, const psvpfs::path& titleIdPath, const psvpfs::path& destTitleIdPath) {
     PfsFilesystem pfs(cryptops, iF00D, std::cout, klicensee, titleIdPath);
 
     if (pfs.mount() < 0)

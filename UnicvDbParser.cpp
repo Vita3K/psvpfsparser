@@ -8,7 +8,7 @@
 
 #include "UnicvDbTypes.h"
 
-UnicvDbParser::UnicvDbParser(psvpfs::path titleIdPath, std::ostream& output)
+UnicvDbParser::UnicvDbParser(const psvpfs::path& titleIdPath, std::ostream& output)
    : m_titleIdPath(titleIdPath), m_output(output)
 {
 }
@@ -21,13 +21,11 @@ int UnicvDbParser::parse()
       return -1;
    }
 
-   psvpfs::path root(m_titleIdPath);
-
-   psvpfs::path filepath = root / "sce_pfs" / "unicv.db";
+   psvpfs::path filepath = m_titleIdPath / "sce_pfs" / "unicv.db";
 
    if(!psvpfs::exists(filepath))
    {
-      psvpfs::path filepath2 = root / "sce_pfs" / "icv.db";
+      psvpfs::path filepath2 = m_titleIdPath / "sce_pfs" / "icv.db";
       if(!psvpfs::exists(filepath2) || !psvpfs::is_directory(filepath2))
       {
          m_output << "failed to find unicv.db file or icv.db folder" << std::endl;

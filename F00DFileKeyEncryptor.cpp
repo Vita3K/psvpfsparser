@@ -4,7 +4,7 @@
 #include <fstream>
 #include <regex>
 
-F00DFileKeyEncryptor::F00DFileKeyEncryptor(psvpfs::path filePath)
+F00DFileKeyEncryptor::F00DFileKeyEncryptor(const psvpfs::path& filePath)
    : m_filePath(filePath), m_isCacheLoaded(false)
 {
 }

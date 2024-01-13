@@ -110,7 +110,7 @@ psvpfs::path source_path_to_dest_path(const psvpfs::path& source_root, const psv
 //===
 
 
-sce_junction::sce_junction(psvpfs::path value)
+sce_junction::sce_junction(const psvpfs::path& value)
    : m_value(value),
       m_real(std::string())
 {
@@ -127,7 +127,7 @@ sce_junction::sce_junction(const sce_junction& other)
 //this is because virtual path in files.db may not exactly match to physical path
 //in real world - windows is case insensitive while linux is case sensitive
 //it seems that pfs assumes windows as its prior filesystem for tools
-bool sce_junction::is_equal(psvpfs::path p) const
+bool sce_junction::is_equal(const psvpfs::path& p) const
 {
 #ifdef PSVPFS_BOOST
    std::string left = m_value.generic_string();
@@ -187,7 +187,7 @@ bool sce_junction::open(std::ifstream& in) const
 }
 
 //create empty directory in destination root using path from this junction
-bool sce_junction::create_empty_directory(psvpfs::path source_root, psvpfs::path destination_root) const
+bool sce_junction::create_empty_directory(const psvpfs::path& source_root, const psvpfs::path& destination_root) const
 {
    //construct new path
    psvpfs::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
@@ -201,7 +201,7 @@ bool sce_junction::create_empty_directory(psvpfs::path source_root, psvpfs::path
 
 //create empty file in destination root using path from this junction
 //leaves stream opened for other operations like write
-bool sce_junction::create_empty_file(psvpfs::path source_root, psvpfs::path destination_root, std::ofstream& outputStream) const
+bool sce_junction::create_empty_file(const psvpfs::path& source_root, const psvpfs::path& destination_root, std::ofstream& outputStream) const
 {
    //construct new path
    psvpfs::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
@@ -225,7 +225,7 @@ bool sce_junction::create_empty_file(psvpfs::path source_root, psvpfs::path dest
 }
 
 //create empty file in destination root using path from this junction
-bool sce_junction::create_empty_file(psvpfs::path source_root, psvpfs::path destination_root) const
+bool sce_junction::create_empty_file(const psvpfs::path& source_root, const psvpfs::path& destination_root) const
 {
    std::ofstream outputStream;
    if(create_empty_file(source_root, destination_root, outputStream))
@@ -240,7 +240,7 @@ bool sce_junction::create_empty_file(psvpfs::path source_root, psvpfs::path dest
 }
 
 //copy file in destination root using path from this junction
-bool sce_junction::copy_existing_file(psvpfs::path source_root, psvpfs::path destination_root) const
+bool sce_junction::copy_existing_file(const psvpfs::path& source_root, const psvpfs::path& destination_root) const
 {
    //construct new path
    psvpfs::path new_path = source_path_to_dest_path(source_root, destination_root, m_real);
@@ -268,7 +268,7 @@ bool sce_junction::copy_existing_file(psvpfs::path source_root, psvpfs::path des
 }
 
 
-bool sce_junction::copy_existing_file(psvpfs::path source_root, psvpfs::path destination_root, std::uintmax_t size) const
+bool sce_junction::copy_existing_file(const psvpfs::path& source_root, const psvpfs::path& destination_root, std::uintmax_t size) const
 {
    if (!copy_existing_file(source_root, destination_root))
       return false;

@@ -36,12 +36,12 @@ private:
    mutable psvpfs::path m_real; //real path in file system
 
 public:
-   sce_junction(psvpfs::path value);
+   sce_junction(const psvpfs::path& value);
 
    sce_junction(const sce_junction& other);
 
 public:
-   bool is_equal(psvpfs::path p) const;
+   bool is_equal(const psvpfs::path& p) const;
 
    bool is_equal(const sce_junction& other) const;
 
@@ -61,20 +61,20 @@ public:
    bool open(std::ifstream& in) const;
 
    //create empty directory in destination root using path from this junction
-   bool create_empty_directory(psvpfs::path source_root, psvpfs::path destination_root) const;
+   bool create_empty_directory(const psvpfs::path& source_root, const psvpfs::path& destination_root) const;
 
    //create empty file in destination root using path from this junction
    //leaves stream opened for other operations like write
-   bool create_empty_file(psvpfs::path source_root, psvpfs::path destination_root, std::ofstream& outputStream) const;
+   bool create_empty_file(const psvpfs::path& source_root, const psvpfs::path& destination_root, std::ofstream& outputStream) const;
 
    //create empty file in destination root using path from this junction
-   bool create_empty_file(psvpfs::path source_root, psvpfs::path destination_root) const;
+   bool create_empty_file(const psvpfs::path& source_root, const psvpfs::path& destination_root) const;
 
    //copy file in destination root using path from this junction
-   bool copy_existing_file(psvpfs::path source_root, psvpfs::path destination_root) const;
+   bool copy_existing_file(const psvpfs::path& source_root, const psvpfs::path& destination_root) const;
 
    //copy file with specific size in destination root using path from this junction
-   bool copy_existing_file(psvpfs::path source_root, psvpfs::path destination_root, std::uintmax_t size) const;
+   bool copy_existing_file(const psvpfs::path& source_root, const psvpfs::path& destination_root, std::uintmax_t size) const;
 
    //return corresponding virtual path
    const psvpfs::path& get_value() const;

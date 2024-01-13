@@ -19,7 +19,7 @@ private:
    std::shared_ptr<IF00DKeyEncryptor> m_iF00D;
    std::ostream& m_output;
    unsigned char m_klicensee[0x10];
-   psvpfs::path m_titleIdPath;
+   const psvpfs::path& m_titleIdPath;
 
 private:
    const sce_ng_pfs_file_t& m_file;
@@ -34,16 +34,16 @@ private:
 
 public:
    PfsFile(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
-           const unsigned char* klicensee, psvpfs::path titleIdPath,
+           const unsigned char* klicensee, const psvpfs::path& titleIdPath,
            const sce_ng_pfs_file_t& file, const sce_junction& filepath, const sce_ng_pfs_header_t& ngpfs, std::shared_ptr<sce_iftbl_base_t> table);
 
 private:
    int init_crypt_ctx(CryptEngineWorkCtx* work_ctx, sig_tbl_t& block, std::uint32_t sector_base, std::uint32_t tail_size, unsigned char* source) const;
 
-   int decrypt_icv_file(psvpfs::path destination_root) const;
+   int decrypt_icv_file(const psvpfs::path& destination_root) const;
 
-   int decrypt_unicv_file(psvpfs::path destination_root) const;
+   int decrypt_unicv_file(const psvpfs::path& destination_root) const;
 
 public:
-   int decrypt_file(psvpfs::path destination_root) const;
+   int decrypt_file(const psvpfs::path& destination_root) const;
 };

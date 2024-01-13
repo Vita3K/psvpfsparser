@@ -4,7 +4,7 @@
 #include "UnicvDbParser.h"
 #include "FilesDbParser.h"
 
-PfsPageMapper::PfsPageMapper(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output, const unsigned char* klicensee, psvpfs::path titleIdPath)
+PfsPageMapper::PfsPageMapper(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output, const unsigned char* klicensee, const psvpfs::path& titleIdPath)
    : m_cryptops(cryptops), m_iF00D(iF00D), m_output(output), m_titleIdPath(titleIdPath)
 {
    memcpy(m_klicensee, klicensee, 0x10);
@@ -395,9 +395,9 @@ int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbP
 }
 
 //this is a test method that was supposed to be used for caching
-int PfsPageMapper::load_page_map(psvpfs::path filepath, std::map<std::uint32_t, std::string>& pageMap) const
+int PfsPageMapper::load_page_map(const psvpfs::path& filepath, std::map<std::uint32_t, std::string>& pageMap) const
 {
-   psvpfs::path fp(filepath);
+   const auto& fp = filepath;
 
    if(!psvpfs::exists(fp))
    {

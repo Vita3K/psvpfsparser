@@ -15,7 +15,7 @@ private:
    bool m_isCacheLoaded;
 
 public:
-   F00DFileKeyEncryptor(psvpfs::path filePath);
+   F00DFileKeyEncryptor(const psvpfs::path& filePath);
 
 private:
    int load_cache_flat_file();

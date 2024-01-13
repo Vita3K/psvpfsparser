@@ -7,13 +7,13 @@
 class UnicvDbParser
 {
 private:
-   psvpfs::path m_titleIdPath;
+   const psvpfs::path& m_titleIdPath;
 
    std::unique_ptr<sce_idb_base_t> m_fdb;
    std::ostream& m_output;
 
 public:
-   UnicvDbParser(psvpfs::path titleIdPath, std::ostream& output);
+   UnicvDbParser(const psvpfs::path& titleIdPath, std::ostream& output);
 
 public:
    int parse();
