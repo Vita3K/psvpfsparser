@@ -27,9 +27,6 @@ public:
    PfsFilesystem(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
                  const unsigned char* klicensee, psvpfs::path titleIdPath);
 
-private:
-   std::vector<sce_ng_pfs_file_t>::const_iterator find_file_by_path(const std::vector<sce_ng_pfs_file_t>& files, const sce_junction& p) const;
-
 public:
    int mount();
 

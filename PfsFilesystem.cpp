@@ -17,16 +17,6 @@ PfsFilesystem::PfsFilesystem(std::shared_ptr<ICryptoOperations> cryptops, std::s
    m_pageMapper = std::unique_ptr<PfsPageMapper>(new PfsPageMapper(cryptops, iF00D, output, klicensee, titleIdPath));
 }
 
-std::vector<sce_ng_pfs_file_t>::const_iterator PfsFilesystem::find_file_by_path(const std::vector<sce_ng_pfs_file_t>& files, const sce_junction& p) const
-{
-   for(std::vector<sce_ng_pfs_file_t>::const_iterator it = files.begin(); it != files.end(); ++it)
-   {
-      if(it->path().is_equal(p))
-         return it;
-   }
-   return files.end();
-}
-
 int PfsFilesystem::mount()
 {
    if(m_filesDbParser->parse() < 0)
@@ -41,6 +31,10 @@ int PfsFilesystem::mount()
    return 0;
 }
 
+static void to_uppercase(std::string &str) {
+   std::transform(str.begin(), str.end(), str.begin(), static_cast<int (*)(int)>(std::toupper));
+}
+
 int PfsFilesystem::decrypt_files(psvpfs::path destTitleIdPath) const
 {
    const sce_ng_pfs_header_t& ngpfs = m_filesDbParser->get_header();
@@ -51,6 +45,14 @@ int PfsFilesystem::decrypt_files(psvpfs::path destTitleIdPath) const
 
    const std::map<std::uint32_t, sce_junction>& pageMap = m_pageMapper->get_pageMap();
    const std::set<sce_junction>& emptyFiles = m_pageMapper->get_emptyFiles();
+
+   std::map<std::string, const sce_ng_pfs_file_t *> file_map;
+   for (const auto &file : files) {
+      std::string path = file.path().get_value().string();
+      to_uppercase(path);
+
+      file_map[path] = &file;
+   }
 
    m_output << "Creating directories..." << std::endl;
 
@@ -71,8 +73,10 @@ int PfsFilesystem::decrypt_files(psvpfs::path destTitleIdPath) const
 
    for(auto& f : emptyFiles)
    {
-      auto file = find_file_by_path(files, f);
-      if(file == files.end())
+      std::string path = f.get_value().string();
+      to_uppercase(path);
+      auto file = file_map.find(path);
+      if (file == file_map.end())
       {
          m_output << "Ignored: " << f << std::endl;
       }
@@ -108,12 +112,15 @@ int PfsFilesystem::decrypt_files(psvpfs::path destTitleIdPath) const
 
       //find file in files.db by filepath
       sce_junction filepath = map_entry->second;
-      auto file = find_file_by_path(files, filepath);
-      if(file == files.end())
+      std::string path = filepath.get_value().string();
+      to_uppercase(path);
+      auto file_ptr = file_map.find(path);
+      if (file_ptr == file_map.end())
       {
          m_output << "failed to find file " << filepath << " in flat file list" << std::endl;
          return -1;
       }
+      auto &file = file_ptr->second;
 
       //directory and unexisting file are unexpected
       if(is_directory(file->file.m_info.header.type) || is_unexisting(file->file.m_info.header.type))

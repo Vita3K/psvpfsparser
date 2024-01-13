@@ -87,7 +87,7 @@ std::string fileTypeToString(sce_ng_pfs_file_types ft)
    }
 }
 
-void to_uppercase(std::string& str) 
+static void to_uppercase(std::string& str) 
 {
     std::transform(str.begin(), str.end(), str.begin(), static_cast<int (*)(int)>(std::toupper));
 }
