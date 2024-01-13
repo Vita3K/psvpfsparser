@@ -82,7 +82,7 @@ int execute(std::string &zrif, std::string &title_src, std::string &title_dst, F
     cfg.title_id_dst = title_dst;
     cfg.f00d_enc_type = type;
     cfg.f00d_arg = f00d_arg;
-    std::shared_ptr<ICryptoOperations> cryptops = CryptoOperationsFactory::create(CryptoOperationsTypes::libtomcrypt);
+    std::shared_ptr<ICryptoOperations> cryptops = CryptoOperationsFactory::create(CryptoOperationsTypes::openssl);
     std::shared_ptr<IF00DKeyEncryptor> iF00D = create_F00D_encryptor(cfg, cryptops);
 
     unsigned char klicensee[0x10] = { 0 };
