@@ -6,7 +6,7 @@
 
 enum class CryptoOperationsTypes
 {
-   libtomcrypt
+   openssl
 };
 
 class CryptoOperationsFactory

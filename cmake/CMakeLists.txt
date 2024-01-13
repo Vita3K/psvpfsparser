@@ -16,14 +16,15 @@ FILE (GLOB F00D_FILES "../IF00DKeyEncryptor.h"
 source_group ("F00D Files" FILES ${F00D_FILES})
 
 FILE (GLOB CRYPTO_FILES "../ICryptoOperations.h"
-                        "../LibTomCryptCryptoOperations.h"
-                        "../LibTomCryptCryptoOperations.cpp"
+                        "../OpenSSLCryptoOperations.h"
+                        "../OpenSSLCryptoOperations.cpp"
                         "../CryptoOperationsFactory.h"
                         "../CryptoOperationsFactory.cpp"
                       )
 source_group ("Crypto Files" FILES ${CRYPTO_FILES})
 
-FILE (GLOB HEADER_FILES "../FilesDbParser.h"
+FILE (GLOB HEADER_FILES "../LocalFilesystem.h"
+                        "../FilesDbParser.h"
                         "../HashTree.h"
                         "../NodeIcvCalculator.h"
                         "../PfsCryptEngine.h"
@@ -80,49 +81,8 @@ FILE (GLOB SOURCE_FILES "../FilesDbParser.cpp"
                         )
 source_group ("Source Files" FILES ${SOURCE_FILES})
 
-list(FIND CMAKE_CXX_KNOWN_FEATURES cxx_std_17 HAS_CXX17)
-
-if(${HAS_CXX17})
-    set(FILESYSTEM_NAMESPACE "std")
-    set(FILESYSTEM_INCLUDE "filesystem")
-else()
-    set(FILESYSTEM_NAMESPACE "boost")
-    set(FILESYSTEM_INCLUDE "boost/filesystem.hpp")
-
-    set(Boost_USE_STATIC_LIBS ON)
-    set(Boost_USE_MULTITHREADED ON)
-
-    if(${BUILD_EXAMPLES})
-        find_package(BOOST COMPONENTS filesystem system program_options REQUIRED)
-    else()
-        find_package(BOOST COMPONENTS filesystem system REQUIRED)
-    endif()
-endif()
-
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/LocalFilesystem.h" "#pragma once
-
-/*
-    THIS IS AN AUTOMATICALLY GENERATED FILE. DO NOT EDIT!
-*/
-
-#include <${FILESYSTEM_INCLUDE}>
-
-namespace psvpfs = ${FILESYSTEM_NAMESPACE}::filesystem;
-")
-
 add_library(${PROJECT} ${HEADER_FILES} ${SOURCE_FILES} ${F00D_FILES} ${CRYPTO_FILES})
-target_link_libraries(${PROJECT} PUBLIC libzRIF libb64 zlib libtomcrypt)
-target_include_directories(${PROJECT} PUBLIC .. ${CMAKE_CURRENT_BINARY_DIR} ${ZLIB_INCLUDE_DIR} ${LIBTOMCRYPT_INCLUDE_DIR} ${LIBB64_INCLUDE_DIR} ${LIBZRIF_INCLUDE_DIR})
+target_link_libraries(${PROJECT} PRIVATE libzRIF libb64 zlib OpenSSL::Crypto)
+target_include_directories(${PROJECT} PUBLIC .. ${ZLIB_INCLUDE_DIR} ${LIBB64_INCLUDE_DIR} ${LIBZRIF_INCLUDE_DIR})
 
-if(NOT ${HAS_CXX17})
-    target_link_libraries(${PROJECT} PRIVATE ${Boost_LIBRARIES})
-    target_include_directories(${PROJECT} PRIVATE ${Boost_INCLUDE_DIRS})
-    target_compile_options(${PROJECT} PRIVATE -DVPSVPFS_BOOST)
-
-    if(${BUILD_EXAMPLES})
-        add_executable(example_project MACOSX_BUNDLE "../example/psvpfsparserconfig.cpp")
-        target_link_libraries(example_project PRIVATE ${PROJECT})
-    endif()
-else()
-    target_compile_features(${PROJECT} PUBLIC cxx_std_17)
-endif()
+target_compile_features(${PROJECT} PUBLIC cxx_std_17)

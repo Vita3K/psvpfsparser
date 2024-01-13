@@ -1,14 +1,14 @@
 #include <stdexcept>
 
 #include "CryptoOperationsFactory.h"
-#include "LibTomCryptCryptoOperations.h"
+#include "OpenSSLCryptoOperations.h"
 
 std::shared_ptr<ICryptoOperations> CryptoOperationsFactory::create(CryptoOperationsTypes type)
 {
    switch(type)
    {
-   case CryptoOperationsTypes::libtomcrypt:
-      return std::make_shared<LibTomCryptCryptoOperations>();
+   case CryptoOperationsTypes::openssl:
+      return std::make_shared<OpenSSLCryptoOperations>();
    default:
       throw std::runtime_error("unexpected CryptoOperationsTypes value");
    }
