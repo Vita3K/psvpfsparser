@@ -146,10 +146,9 @@ int check_keystone(std::shared_ptr<ICryptoOperations> cryptops, keystone_t& ks, 
 
 //public functions
 
-int get_sealedkey(std::shared_ptr<ICryptoOperations> cryptops, psvpfs::path titleIdPath, unsigned char* dec_key)
+int get_sealedkey(std::shared_ptr<ICryptoOperations> cryptops, const psvpfs::path& titleIdPath, unsigned char* dec_key)
 {
-   psvpfs::path root(titleIdPath);
-   psvpfs::path filepath = root / "sce_sys" / "sealedkey";
+   psvpfs::path filepath = titleIdPath / "sce_sys" / "sealedkey";
 
    if(!psvpfs::exists(filepath))
    {
@@ -170,10 +169,9 @@ int get_sealedkey(std::shared_ptr<ICryptoOperations> cryptops, psvpfs::path titl
    return 0;
 }
 
-int get_keystone(std::shared_ptr<ICryptoOperations> cryptops, psvpfs::path titleIdPath, char* passcode)
+int get_keystone(std::shared_ptr<ICryptoOperations> cryptops, const psvpfs::path& titleIdPath, char* passcode)
 {
-   psvpfs::path root(titleIdPath);
-   psvpfs::path filepath = root / "sce_sys" / "keystone";
+   psvpfs::path filepath = titleIdPath / "sce_sys" / "keystone";
 
    if(!psvpfs::exists(filepath))
    {

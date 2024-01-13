@@ -245,9 +245,9 @@ private:
    bool constructFilePaths(const std::map<std::uint32_t, std::uint32_t>& dirMatrix, const std::map<std::uint32_t, std::uint32_t>& fileMatrix, const std::vector<sce_ng_pfs_flat_block_t>& flatBlocks);
 
 private:
-   bool linkDirpaths(const std::set<psvpfs::path> real_directories);
+   bool linkDirpaths(const std::set<psvpfs::path>& real_directories);
 
-   bool linkFilepaths(const std::set<psvpfs::path> real_files, std::uint32_t fileSectorSize);
+   bool linkFilepaths(const std::set<psvpfs::path>& real_files, std::uint32_t fileSectorSize);
 
    int matchFileLists(const std::set<psvpfs::path>& files);
 

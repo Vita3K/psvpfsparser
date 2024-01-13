@@ -168,13 +168,11 @@ bool FilesDbParser::verify_header_icv(std::ifstream& inputStream, const unsigned
 
 bool FilesDbParser::get_isUnicv(bool& isUnicv)
 {
-   psvpfs::path root(m_titleIdPath);
-
-   psvpfs::path filepath = root / "sce_pfs" / "unicv.db";
+   psvpfs::path filepath = m_titleIdPath / "sce_pfs" / "unicv.db";
 
    if(!psvpfs::exists(filepath))
    {
-      psvpfs::path filepath2 = root / "sce_pfs" / "icv.db";
+      psvpfs::path filepath2 = m_titleIdPath / "sce_pfs" / "icv.db";
       if(!psvpfs::exists(filepath2) || !psvpfs::is_directory(filepath2))
       {
          m_output << "failed to find unicv.db file or icv.db folder" << std::endl;
@@ -790,7 +788,7 @@ bool FilesDbParser::constructFilePaths(const std::map<std::uint32_t, std::uint32
 }
 
 //checks that directory exists
-bool FilesDbParser::linkDirpaths(const std::set<psvpfs::path> real_directories)
+bool FilesDbParser::linkDirpaths(const std::set<psvpfs::path>& real_directories)
 {
    m_output << "Linking dir paths..." << std::endl;
 
@@ -826,7 +824,7 @@ bool FilesDbParser::linkDirpaths(const std::set<psvpfs::path> real_directories)
 
 //checks that files exist
 //checks that file size is correct
-bool FilesDbParser::linkFilepaths(const std::set<psvpfs::path> real_files, std::uint32_t fileSectorSize)
+bool FilesDbParser::linkFilepaths(const std::set<psvpfs::path>& real_files, std::uint32_t fileSectorSize)
 {
    m_output << "Linking file paths..." << std::endl;
 

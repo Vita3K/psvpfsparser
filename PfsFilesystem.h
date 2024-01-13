@@ -16,7 +16,7 @@ private:
    std::shared_ptr<IF00DKeyEncryptor> m_iF00D;
    std::ostream& m_output;
    unsigned char m_klicensee[0x10];
-   psvpfs::path m_titleIdPath;
+   const psvpfs::path& m_titleIdPath;
 
 private:
    std::unique_ptr<FilesDbParser> m_filesDbParser;
@@ -25,10 +25,10 @@ private:
 
 public:
    PfsFilesystem(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKeyEncryptor> iF00D, std::ostream& output,
-                 const unsigned char* klicensee, psvpfs::path titleIdPath);
+                 const unsigned char* klicensee, const psvpfs::path& titleIdPath);
 
 public:
    int mount();
 
-   int decrypt_files(psvpfs::path destTitleIdPath) const;
+   int decrypt_files(const psvpfs::path& destTitleIdPath) const;
 };
