@@ -80,11 +80,9 @@ int SceSblSsMgrForDriver_sceSblSsMgrAESCBCEncryptForDriver(std::shared_ptr<ICryp
 
 // aes-ecb
 
-//not tested
+//tested by re-encrypting savedata, the output matches files written by the PS Vita
 int SceSblSsMgrForDriver_sceSblSsMgrAESECBEncryptForDriver(std::shared_ptr<ICryptoOperations> cryptops, const unsigned char* src, unsigned char* dst, int size, const unsigned char* key, int key_size, int mask_enable)
 {
-   throw std::runtime_error("not tested");
-
    if(mask_enable != 1)
       throw std::runtime_error("Unexpected mask_enable");
 

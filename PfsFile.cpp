@@ -82,37 +82,42 @@ int PfsFile::init_crypt_ctx(CryptEngineWorkCtx* work_ctx, sig_tbl_t& block, std:
    else
    {
       //for icv files we need to restore natural order of hashes in hash table (which is the order of sectors in file)
-
-      //create merkle tree for corresponding table
-      std::shared_ptr<merkle_tree<icv> > mkt = generate_merkle_tree<icv>(m_table->get_header()->get_numSectors());
-      index_merkle_tree(mkt);
-
-      //collect leaves
-      std::vector<std::shared_ptr<merkle_tree_node<icv> > > leaves;
-      walk_tree(mkt, collect_leaf, &leaves);
-
-      if(mkt->nLeaves != leaves.size())
-      {
-         m_output << "Invalid number of leaves collected" << std::endl;
-         return -1;
-      }
-
-      std::map<std::uint32_t, icv> naturalHashTable;
-
-      //skip first chunk of hashes that corresponds to nodes of merkle tree (we only need to go through leaves)
-      for(std::uint32_t i = mkt->nNodes - mkt->nLeaves, j = 0; i < block.m_signatures.size(); i++, j++)
-      {
-         naturalHashTable.insert(std::make_pair(leaves[j]->m_index, block.m_signatures[i]));
-      }
-
+      //each of the first pages holds the merkle tree of up to ICV_SECTORS_PER_PAGE consecutive sectors
       m_signatureTable.clear();
-      m_signatureTable.resize(naturalHashTable.size() * block.get_header()->get_sigSize());
 
-      std::uint32_t signatureTableOffset = 0;
-      for(auto& s :  naturalHashTable)
+      std::uint32_t nSectorsLeft = m_table->get_header()->get_numSectors();
+      for(std::size_t p = 0; nSectorsLeft > 0; p++)
       {
-         memcpy(m_signatureTable.data() + signatureTableOffset, s.second.m_data.data(), block.get_header()->get_sigSize());
-         signatureTableOffset += block.get_header()->get_sigSize();
+         const sig_tbl_t& page = m_table->m_blocks.at(p);
+         std::uint32_t nPageSectors = std::min<std::uint32_t>(ICV_SECTORS_PER_PAGE, nSectorsLeft);
+         nSectorsLeft -= nPageSectors;
+
+         //create merkle tree for corresponding page
+         std::shared_ptr<merkle_tree<icv> > mkt = generate_merkle_tree<icv>(nPageSectors);
+         index_merkle_tree(mkt);
+
+         //collect leaves
+         std::vector<std::shared_ptr<merkle_tree_node<icv> > > leaves;
+         walk_tree(mkt, collect_leaf, &leaves);
+
+         if(mkt->nLeaves != leaves.size())
+         {
+            m_output << "Invalid number of leaves collected" << std::endl;
+            return -1;
+         }
+
+         std::map<std::uint32_t, icv> naturalHashTable;
+
+         //skip first chunk of hashes that corresponds to nodes of merkle tree (we only need to go through leaves)
+         for(std::uint32_t i = mkt->nNodes - mkt->nLeaves, j = 0; i < page.m_signatures.size(); i++, j++)
+         {
+            naturalHashTable.insert(std::make_pair(leaves[j]->m_index, page.m_signatures[i]));
+         }
+
+         for(auto& s :  naturalHashTable)
+         {
+            m_signatureTable.insert(m_signatureTable.end(), s.second.m_data.begin(), s.second.m_data.begin() + page.get_header()->get_sigSize());
+         }
       }
    }
 
@@ -158,8 +163,6 @@ int PfsFile::decrypt_icv_file(const psvpfs::path& destination_root) const
    //this is different from unicv where it has one has per sector
    //we can use get_numSectors() there
 
-   //if number of sectors is less than or same to number that fits into single signature page
-   if(m_table->get_header()->get_numHashes() <= m_table->get_header()->get_binTreeNumMaxAvail())
    {
       std::vector<std::uint8_t> buffer(static_cast<std::vector<std::uint8_t>::size_type>(fileSize));
       inputStream.read((char*)buffer.data(), fileSize);
@@ -183,15 +186,6 @@ int PfsFile::decrypt_icv_file(const psvpfs::path& destination_root) const
       {
          outputStream.write((char*)buffer.data(), realfileSize);
       }
-   }
-   else
-   {
-      //I do not think that icv file supports more than one signature page
-      //meaning that size is limited to 23 sectors
-      //lets keep things simple for now
-      //if it supports more than one signature page - different places in the code will have to be fixed
-      m_output << "Maximum number of hashes in icv file is exceeded" << std::endl;
-      return -1;
    }
 
    inputStream.close();

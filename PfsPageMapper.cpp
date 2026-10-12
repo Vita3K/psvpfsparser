@@ -200,25 +200,45 @@ int PfsPageMapper::validate_merkle_trees(const std::unique_ptr<FilesDbParser>& f
 
       try
       {
-         //get merkle tree (it should already be indexed)
-         std::shared_ptr<merkle_tree<icv> > mkt = entry.second;
+         //each signature page holds the merkle tree of up to ICV_SECTORS_PER_PAGE items
+         //items are sectors for the first pages and roots of the previous level pages after that
+         std::vector<icv> levelItems;
+         for(auto& h : sectorHashMap)
+            levelItems.push_back(h.second);
 
-         //assign hashes to leaves
-         walk_tree(mkt, assign_hash, &sectorHashMap);
-
-         //calculate node hashes
          auto combine_ctx = std::make_pair(m_cryptops, secret);
-         bottom_top_walk_combine(mkt, combine_hash, &combine_ctx);
-
-         //collect hashes into table
-         std::vector<icv> hashTable;
-         walk_tree(mkt, collect_hash, &hashTable);
-
-         //compare tables
-         if(compare_hash_tables(hashTable, table->m_blocks.front().m_signatures) < 0)
+         std::size_t blockIndex = 0;
+         while(true)
          {
-            m_output << "Merkle tree is invalid in file " << junction << std::endl;
-            return -1;
+            std::vector<icv> pageRoots;
+            for(std::size_t first = 0; first < levelItems.size(); first += ICV_SECTORS_PER_PAGE)
+            {
+               std::uint32_t nItems = static_cast<std::uint32_t>(std::min<std::size_t>(ICV_SECTORS_PER_PAGE, levelItems.size() - first));
+
+               std::map<std::uint32_t, icv> itemMap;
+               for(std::uint32_t i = 0; i < nItems; i++)
+                  itemMap.insert(std::make_pair(i, levelItems[first + i]));
+
+               std::shared_ptr<merkle_tree<icv> > mkt = generate_merkle_tree<icv>(nItems);
+               index_merkle_tree(mkt);
+               walk_tree(mkt, assign_hash, &itemMap);
+               bottom_top_walk_combine(mkt, combine_hash, &combine_ctx);
+
+               std::vector<icv> hashTable;
+               walk_tree(mkt, collect_hash, &hashTable);
+
+               if(blockIndex >= table->m_blocks.size() || compare_hash_tables(hashTable, table->m_blocks[blockIndex++].m_signatures) < 0)
+               {
+                  m_output << "Merkle tree is invalid in file " << junction << std::endl;
+                  return -1;
+               }
+
+               pageRoots.push_back(hashTable.front());
+            }
+
+            if(pageRoots.size() == 1)
+               break;
+            levelItems = pageRoots;
          }
 
          m_output << "File: " << std::hex << table->get_icv_salt() << " [OK]" << std::endl;
@@ -335,8 +355,8 @@ int PfsPageMapper::bruteforce_map(const std::unique_ptr<FilesDbParser>& filesDbP
          {
             try
             {
-               //create merkle tree for corresponding table
-               std::shared_ptr<merkle_tree<icv> > mkt = generate_merkle_tree<icv>(t->get_header()->get_numSectors());
+               //create merkle tree for the first signature page, which holds the zero sector
+               std::shared_ptr<merkle_tree<icv> > mkt = generate_merkle_tree<icv>(std::min<std::uint32_t>(ICV_SECTORS_PER_PAGE, t->get_header()->get_numSectors()));
                index_merkle_tree(mkt);
 
                //save merkle tree
