@@ -25,8 +25,9 @@ int execute(std::shared_ptr<ICryptoOperations> cryptops, std::shared_ptr<IF00DKe
 
     std::cout << "keystone sanity check..." << std::endl;
 
+    // homebrew savedata has an all-zero keystone although its files decrypt and verify fine
     if (get_keystone(cryptops, destTitleIdPath) < 0)
-        return -1;
+        std::cout << "[WARNING] keystone sanity check failed" << std::endl;
 
     std::cout << "F00D cache:" << std::endl;
     iF00D->print_cache(std::cout);

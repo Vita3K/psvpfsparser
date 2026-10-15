@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <vector>
 #include <iostream>
@@ -36,6 +37,7 @@
 #define NULL_EXPECTED_VERSION 1
 
 #define ICV_NUM_ENTRIES 0x2D
+#define ICV_SECTORS_PER_PAGE ((ICV_NUM_ENTRIES + 1) / 2)
 
 #pragma pack(push, 1)
 
@@ -222,6 +224,8 @@ public:
 
 class sig_tbl_header_merkle_t : public sig_tbl_header_base_t
 {
+   std::uint32_t m_level = 0;
+
 public:
    sig_tbl_header_merkle_t(std::ostream& output)
       : sig_tbl_header_base_t(output)
@@ -429,7 +433,8 @@ public:
 
    bool post_validate(const std::vector<sig_tbl_t>& blocks) const override
    {
-      const unsigned char* rootSig = blocks.front().m_signatures.front().m_data.data();
+      // with several signature pages the top level page comes last
+      const unsigned char* rootSig = blocks.back().m_signatures.front().m_data.data();
       if(memcmp(rootSig, m_header.merkleTreeRoot, 0x14) != 0)
       {
          m_output << "Root icv is invalid" << std::endl;

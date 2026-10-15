@@ -148,10 +148,12 @@ bool sig_tbl_header_normal_t::validate_tail(std::shared_ptr<sce_iftbl_base_t> ff
 
 bool sig_tbl_header_merkle_t::read(std::ifstream& inputStream, std::shared_ptr<sce_iftbl_base_t> fft, std::uint32_t sizeCheck, std::vector<icv>& signatures)
 {
-   //read weird 0x10 byte zero header which makes the data not being aligned on page boder
+   //0x10 byte header which makes the data not being aligned on page boder
+   //first word is the level of the page in the tree of signature pages (0 for pages that hash sectors)
    unsigned char zero_header[0x10];
    inputStream.read((char*)zero_header, 0x10);
-   if(!isZeroVector(zero_header, zero_header + 0x10))
+   memcpy(&m_level, zero_header, sizeof(m_level));
+   if(!isZeroVector(zero_header + sizeof(m_level), zero_header + 0x10))
    {
       m_output << "Invalid zero vector" << std::endl;
       return false;
@@ -162,12 +164,17 @@ bool sig_tbl_header_merkle_t::read(std::ifstream& inputStream, std::shared_ptr<s
 
 bool sig_tbl_header_merkle_t::validate_tail(std::shared_ptr<sce_iftbl_base_t> fft, const std::vector<std::uint8_t>& data) const
 {
+   //upper level pages have an unknown tail
+   if(m_level != 0)
+      return true;
+
    std::vector<std::uint8_t> data_copy(data);
 
    uint32_t* unk_value_base = (uint32_t*)(data_copy.data() + (data_copy.size() - 0x5C));
 
-   //there should be one 0xFFFFFFFF value per sector
-   for(std::uint32_t i = 0; i < fft->get_header()->get_numSectors(); i++)
+   //there should be one 0xFFFFFFFF value per sector hashed by this page
+   const std::uint32_t nPageSectors = (m_header.nSignatures + 1) / 2;
+   for(std::uint32_t i = 0; i < nPageSectors; i++)
    {
       if(*(unk_value_base + i) != 0xFFFFFFFF)
       {
@@ -286,12 +293,6 @@ bool sce_icvdb_header_proxy_t::validate() const
    if(m_header.unk1 != 0xFFFFFFFF)
    {
       m_output << "Unexpected unk3" << std::endl;
-      return false;
-   }
-
-   if(m_header.padding != 0)
-   {
-      m_output << "Unexpected padding" << std::endl;
       return false;
    }
 
@@ -493,10 +494,65 @@ std::uint32_t sce_icvdb_proxy_t::get_icv_salt() const
    return m_icv_salt; // icv.db uses file name as salt
 }
 
+//a page hashes up to ICV_SECTORS_PER_PAGE sectors with its own merkle tree
+//larger files get more such pages and upper level pages that hash their roots
+//pages of different levels are interleaved on disk, so they are reordered by level here
 bool sce_icvdb_proxy_t::read(std::ifstream& inputStream, std::uint64_t& index, std::uint32_t icv_salt)
 {
    m_icv_salt = icv_salt;
-   return sce_iftbl_cvdb_proxy_t::read(inputStream, index, icv_salt);
+
+   if(!sce_iftbl_base_t::read(inputStream, index, icv_salt))
+      return false;
+
+   std::uint64_t cp = inputStream.tellg();
+   std::uint64_t tail = m_header->get_pageSize() - cp % m_header->get_pageSize();
+   std::vector<std::uint8_t> tailData(static_cast<std::vector<std::uint8_t>::size_type>(tail));
+   inputStream.read((char*)tailData.data(), tail);
+   if(!isZeroVector(tailData))
+   {
+      m_output << "Unexpected data instead of padding" << std::endl;
+      return false;
+   }
+
+   m_page = off2page(inputStream.tellg(), m_header->get_pageSize());
+
+   //number of hashes expected in each page of each level
+   std::vector<std::vector<std::uint32_t> > levelPageSizes;
+   std::size_t nPagesTotal = 0;
+   for(std::uint32_t nLevelItems = m_header->get_numSectors(); nLevelItems > 0;)
+   {
+      std::vector<std::uint32_t>& pageSizes = levelPageSizes.emplace_back();
+      for(std::uint32_t first = 0; first < nLevelItems; first += ICV_SECTORS_PER_PAGE)
+         pageSizes.push_back(std::min<std::uint32_t>(ICV_SECTORS_PER_PAGE, nLevelItems - first) * 2 - 1);
+      nPagesTotal += pageSizes.size();
+      nLevelItems = pageSizes.size() > 1 ? static_cast<std::uint32_t>(pageSizes.size()) : 0;
+   }
+
+   std::vector<std::size_t> levelPagesRead(levelPageSizes.size());
+   std::vector<std::vector<sig_tbl_t> > levelBlocks(levelPageSizes.size());
+   for(std::size_t i = 0; i < nPagesTotal; i++)
+   {
+      std::uint32_t level = 0;
+      inputStream.read((char*)&level, sizeof(level));
+      inputStream.seekg(-static_cast<std::streamoff>(sizeof(level)), std::ios::cur);
+
+      if(level >= levelPageSizes.size() || levelPagesRead[level] >= levelPageSizes[level].size())
+      {
+         m_output << "Unexpected signature page level" << std::endl;
+         return false;
+      }
+
+      if(!read_block(inputStream, index, levelPageSizes[level][levelPagesRead[level]++]))
+         return false;
+
+      levelBlocks[level].push_back(m_blocks.back());
+      m_blocks.pop_back();
+   }
+
+   for(auto& blocks : levelBlocks)
+      m_blocks.insert(m_blocks.end(), blocks.begin(), blocks.end());
+
+   return m_header->post_validate(m_blocks);
 }
 
 

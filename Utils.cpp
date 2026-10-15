@@ -69,17 +69,13 @@ void getFileListNoPfs(psvpfs::path root_path, std::set<psvpfs::path>& files, std
 
          //skip pfs directory
          if(cp.filename() == psvpfs::path("sce_pfs")) {
-#ifdef PSVPFS_BOOST
-            i.no_push(true);
-#endif
+            i.disable_recursion_pending();
             continue;
          }
 
          //skip packages
          if(cp == (root_path / "sce_sys" / "package")) {
-#ifdef PSVPFS_BOOST
-            i.no_push(true);
-#endif
+            i.disable_recursion_pending();
             continue;
          }
 
@@ -87,9 +83,7 @@ void getFileListNoPfs(psvpfs::path root_path, std::set<psvpfs::path>& files, std
          if(cp.stem().string() == "sce_sys" &&
             cp != root_path / psvpfs::path("sce_sys") &&
                psvpfs::exists(cp / psvpfs::path("keystone"))) {
-#ifdef PSVPFS_BOOST
-            i.no_push(true);
-#endif
+            i.disable_recursion_pending();
             continue;
          }
 
