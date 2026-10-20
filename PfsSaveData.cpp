@@ -236,8 +236,19 @@ bool encrypt_file(const Context& ctx, Entry& e, const psvpfs::path& dst, const p
    }
    else
    {
-      std::ifstream is(e.real, std::ios::binary);
-      data.assign(std::istreambuf_iterator<char>(is), {});
+      std::ifstream is(e.real, std::ios::binary | std::ios::ate);
+      const std::streamoff size = is.tellg();
+      if(!is || size < 0)
+      {
+         output << "Failed to open " << e.real << std::endl;
+         return false;
+      }
+      data.resize(static_cast<std::size_t>(size));
+      if(!is.seekg(0) || !is.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size())))
+      {
+         output << "Failed to read " << e.real << std::endl;
+         return false;
+      }
       e.size = static_cast<std::uint32_t>(data.size());
       if(data.empty())
       {
